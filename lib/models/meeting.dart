@@ -2,11 +2,17 @@ import 'package:hive/hive.dart';
 
 part 'meeting.g.dart';
 
+@HiveType(typeId: 2)
 enum WeekType {
+  @HiveField(0)
   both,       // Every week
+  @HiveField(1)
   a,          // Week A only
+  @HiveField(2)
   b,          // Week B only
+  @HiveField(3)
   monthly,    // Monthly
+  @HiveField(4)
   quarterly   // Quarterly
 }
 

@@ -66,3 +66,57 @@ class MeetingAdapter extends TypeAdapter<Meeting> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
+
+class WeekTypeAdapter extends TypeAdapter<WeekType> {
+  @override
+  final int typeId = 2;
+
+  @override
+  WeekType read(BinaryReader reader) {
+    switch (reader.readByte()) {
+      case 0:
+        return WeekType.both;
+      case 1:
+        return WeekType.a;
+      case 2:
+        return WeekType.b;
+      case 3:
+        return WeekType.monthly;
+      case 4:
+        return WeekType.quarterly;
+      default:
+        return WeekType.both;
+    }
+  }
+
+  @override
+  void write(BinaryWriter writer, WeekType obj) {
+    switch (obj) {
+      case WeekType.both:
+        writer.writeByte(0);
+        break;
+      case WeekType.a:
+        writer.writeByte(1);
+        break;
+      case WeekType.b:
+        writer.writeByte(2);
+        break;
+      case WeekType.monthly:
+        writer.writeByte(3);
+        break;
+      case WeekType.quarterly:
+        writer.writeByte(4);
+        break;
+    }
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is WeekTypeAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}

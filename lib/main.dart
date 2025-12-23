@@ -14,7 +14,8 @@ void main() async {
     // Initialize Hive
     await Hive.initFlutter();
     
-    // Register Hive adapters
+    // Register Hive adapters (must be registered before opening any boxes)
+    Hive.registerAdapter(WeekTypeAdapter());
     Hive.registerAdapter(MeetingAdapter());
     Hive.registerAdapter(CategoryAdapter());
     
