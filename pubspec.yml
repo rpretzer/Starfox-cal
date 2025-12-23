@@ -19,24 +19,8 @@ dependencies:
   hive_flutter: ^1.1.0
   path_provider: ^2.1.1
   
-  # Calendar and date utilities
-  table_calendar: ^3.0.9
+  # Date utilities
   intl: ^0.18.1
-  
-  # Device calendar integration
-  device_calendar: ^4.3.2
-  
-  # UI components
-  flutter_slidable: ^3.0.1
-  flutter_colorpicker: ^1.0.3
-  flutter_speed_dial: ^7.0.0
-  
-  # Drag and drop
-  drag_and_drop_lists: ^0.3.3
-  
-  # Notifications
-  flutter_local_notifications: ^15.1.1
-  timezone: ^0.9.2
   
 dev_dependencies:
   flutter_test:
