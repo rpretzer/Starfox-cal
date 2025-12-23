@@ -28,8 +28,7 @@ lib/
 │   ├── categories_view.dart
 │   ├── conflicts_view.dart
 │   ├── day_column.dart
-│   ├── meeting_card.dart
-│   └── representation_strategy_card.dart
+│   └── meeting_card.dart
 ├── services/                 # Business logic
 │   └── storage_service.dart
 └── utils/                    # Utilities
