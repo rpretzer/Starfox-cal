@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:starfox_calendar/screens/category_management_screen.dart';
 import 'package:starfox_calendar/services/storage_service.dart';
 import 'package:starfox_calendar/utils/constants.dart';
 
@@ -38,6 +39,35 @@ class SettingsScreen extends StatelessWidget {
                   subtitle: Text('Week ${storageService.currentWeekType}'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _showWeekTypeSelector(context, storageService),
+                ),
+              ),
+              
+              const SizedBox(height: AppConstants.largePadding),
+              
+              // Categories Management
+              const Text(
+                'Categories',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: AppConstants.smallPadding),
+              
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.category),
+                  title: const Text('Manage Categories'),
+                  subtitle: Text('${storageService.categories.length} categories'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CategoryManagementScreen(),
+                      ),
+                    );
+                  },
                 ),
               ),
               

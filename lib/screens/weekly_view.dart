@@ -35,12 +35,20 @@ class WeeklyView extends StatelessWidget {
   
   // Build a scrollable week grid for smaller screens
   Widget _buildScrollableWeekGrid() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: _buildDayColumns(),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Use 85% of screen width for each day column on mobile
+        final columnWidth = constraints.maxWidth * 0.85;
+        
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: _buildDayColumnsForMobile(columnWidth),
+          ),
+        );
+      },
     );
   }
   
@@ -48,12 +56,35 @@ class WeeklyView extends StatelessWidget {
   Widget _buildDesktopWeekGrid() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: _buildDayColumns(),
+      children: _buildDayColumnsForDesktop(),
     );
   }
   
-  // Build day columns for each weekday (memoized)
-  List<Widget> _buildDayColumns() {
+  // Build day columns for mobile with fixed width
+  List<Widget> _buildDayColumnsForMobile(double columnWidth) {
+    return AppConstants.daysOfWeek.map((day) {
+      // Get meetings for this day
+      final meetings = storageService.getMeetingsForDay(day);
+      
+      return SizedBox(
+        width: columnWidth,
+        key: ValueKey('$day-${storageService.currentWeekType}'),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+          child: DayColumn(
+            day: day,
+            meetings: meetings,
+            onMeetingTap: onMeetingTapped,
+            onDrop: (meetingId) => _handleMeetingDrop(meetingId, day),
+            storageService: storageService,
+          ),
+        ),
+      );
+    }).toList();
+  }
+  
+  // Build day columns for desktop with expanded width
+  List<Widget> _buildDayColumnsForDesktop() {
     return AppConstants.daysOfWeek.map((day) {
       // Get meetings for this day
       final meetings = storageService.getMeetingsForDay(day);

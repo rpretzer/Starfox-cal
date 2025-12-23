@@ -103,6 +103,11 @@ class StorageService extends ChangeNotifier {
     return _categoriesBox.get(id);
   }
   
+  // Check if a category ID exists
+  bool categoryExists(String id) {
+    return _categoriesBox.containsKey(id);
+  }
+  
   // Set current week type (A or B)
   Future<void> setCurrentWeekType(String weekType) async {
     if (_currentWeekType == weekType) return; // Skip if unchanged

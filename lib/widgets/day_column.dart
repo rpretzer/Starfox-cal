@@ -88,7 +88,10 @@ class _DayColumnState extends State<DayColumn> {
             children: [
               // Day header
               Container(
-                padding: const EdgeInsets.all(AppConstants.smallPadding),
+                padding: const EdgeInsets.symmetric(
+                  vertical: AppConstants.smallPadding,
+                  horizontal: AppConstants.smallPadding,
+                ),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
                   boxShadow: [
@@ -104,7 +107,11 @@ class _DayColumnState extends State<DayColumn> {
                     widget.day,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
+                      fontSize: MediaQuery.of(context).size.width < 600 ? 14 : null,
                     ),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),

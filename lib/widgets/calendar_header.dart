@@ -18,58 +18,115 @@ class CalendarHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RepaintBoundary(
-      child: Container(
-      padding: const EdgeInsets.all(AppConstants.defaultPadding),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 2,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // View selector
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'View:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isMobile = constraints.maxWidth < 600;
+          
+          return Container(
+            padding: EdgeInsets.all(
+              isMobile ? AppConstants.smallPadding : AppConstants.defaultPadding,
+            ),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 2,
+                  offset: const Offset(0, 2),
                 ),
-                const SizedBox(height: 4),
-                _buildViewSelector(context),
               ],
             ),
-          ),
-          
-          const SizedBox(width: AppConstants.defaultPadding),
-          
-          // Week type selector
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Week:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                _buildWeekTypeSelector(context),
-              ],
+            child: isMobile
+                ? _buildMobileLayout(context)
+                : _buildDesktopLayout(context),
+          );
+        },
+      ),
+    );
+  }
+  
+  // Mobile layout - stacked vertically
+  Widget _buildMobileLayout(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // View selector
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'View:',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
             ),
+            const SizedBox(height: 4),
+            _buildViewSelector(context),
+          ],
+        ),
+        
+        const SizedBox(height: AppConstants.smallPadding),
+        
+        // Week type selector
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Week:',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(height: 4),
+            _buildWeekTypeSelector(context),
+          ],
+        ),
+      ],
+    );
+  }
+  
+  // Desktop layout - side by side
+  Widget _buildDesktopLayout(BuildContext context) {
+    return Row(
+      children: [
+        // View selector
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'View:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              _buildViewSelector(context),
+            ],
           ),
-        ],
-      ),
-      ),
+        ),
+        
+        const SizedBox(width: AppConstants.defaultPadding),
+        
+        // Week type selector
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Week:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              _buildWeekTypeSelector(context),
+            ],
+          ),
+        ),
+      ],
     );
   }
   
@@ -110,14 +167,15 @@ class CalendarHeader extends StatelessWidget {
   // Build a single view option button
   Widget _buildViewOption(BuildContext context, String view, String label, IconData icon) {
     final isSelected = currentView == view;
+    final isMobile = MediaQuery.of(context).size.width < 600;
     
     return Expanded(
       child: InkWell(
         onTap: () => onViewChanged(view),
         child: Container(
-          padding: const EdgeInsets.symmetric(
-            vertical: 8,
-            horizontal: 4,
+          padding: EdgeInsets.symmetric(
+            vertical: isMobile ? 10 : 8,
+            horizontal: isMobile ? 6 : 4,
           ),
           decoration: BoxDecoration(
             color: isSelected 
@@ -127,23 +185,27 @@ class CalendarHeader extends StatelessWidget {
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 icon,
-                size: 16,
+                size: isMobile ? 18 : 16,
                 color: isSelected 
                     ? Colors.white 
                     : Theme.of(context).colorScheme.primary,
               ),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected 
-                      ? Colors.white 
-                      : Theme.of(context).colorScheme.primary,
+              SizedBox(width: isMobile ? 6 : 4),
+              Flexible(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: isMobile ? 13 : 12,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected 
+                        ? Colors.white 
+                        : Theme.of(context).colorScheme.primary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
