@@ -28,12 +28,27 @@ class DayColumn extends StatefulWidget {
 class _DayColumnState extends State<DayColumn> {
   bool _isDragOver = false;
   
+  List<Meeting>? _cachedSortedMeetings;
+  String? _cachedMeetingsHash;
+  
+  List<Meeting> _getSortedMeetings() {
+    // Cache sorted meetings to avoid re-sorting on every build
+    final currentHash = widget.meetings.map((m) => '${m.id}:${m.startTime}').join(',');
+    if (_cachedSortedMeetings != null && _cachedMeetingsHash == currentHash) {
+      return _cachedSortedMeetings!;
+    }
+    
+    final sorted = List<Meeting>.from(widget.meetings);
+    sorted.sort((a, b) => DateTimeUtils.compareTime(a.startTime, b.startTime));
+    _cachedSortedMeetings = sorted;
+    _cachedMeetingsHash = currentHash;
+    return sorted;
+  }
+  
   @override
   Widget build(BuildContext context) {
-    // Sort meetings by time
-    final sortedMeetings = List<Meeting>.from(widget.meetings);
-    sortedMeetings.sort((a, b) => 
-      DateTimeUtils.compareTime(a.startTime, b.startTime));
+    // Use cached sorted meetings
+    final sortedMeetings = _getSortedMeetings();
     
     return DragTarget<int>(
       onWillAccept: (data) => true,

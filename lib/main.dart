@@ -7,8 +7,45 @@ import 'package:starfox_calendar/screens/calendar_screen.dart';
 import 'package:starfox_calendar/services/storage_service.dart';
 import 'package:starfox_calendar/utils/theme.dart';
 
+// Loading screen shown during initialization
+class LoadingApp extends StatelessWidget {
+  const LoadingApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 24),
+              Text(
+                'Sprint Calendar',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Loading...',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Show loading screen immediately
+  runApp(const LoadingApp());
   
   try {
     // Initialize Hive
@@ -23,6 +60,7 @@ void main() async {
     final storageService = StorageService();
     await storageService.init();
     
+    // Replace loading app with main app
     runApp(MyApp(storageService: storageService));
   } catch (e, stackTrace) {
     // Error handling for web - show error in console and render error widget
@@ -71,7 +109,7 @@ class MyApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (_) => storageService,
       child: MaterialApp(
-        title: 'Starfox Calendar',
+        title: 'Sprint Calendar',
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: ThemeMode.system,

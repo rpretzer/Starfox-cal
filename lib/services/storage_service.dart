@@ -62,12 +62,14 @@ class StorageService extends ChangeNotifier {
   // Save or update a meeting
   Future<void> saveMeeting(Meeting meeting) async {
     await _meetingsBox.put(meeting.id, meeting);
+    _meetingsCache.clear(); // Clear cache when meetings change
     notifyListeners();
   }
   
   // Delete a meeting
   Future<void> deleteMeeting(int id) async {
     await _meetingsBox.delete(id);
+    _meetingsCache.clear(); // Clear cache when meetings change
     notifyListeners();
   }
   
@@ -103,29 +105,52 @@ class StorageService extends ChangeNotifier {
   
   // Set current week type (A or B)
   Future<void> setCurrentWeekType(String weekType) async {
+    if (_currentWeekType == weekType) return; // Skip if unchanged
     _currentWeekType = weekType;
     await _settingsBox.put('currentWeekType', weekType);
+    _meetingsCache.clear(); // Clear cache when week type changes
     notifyListeners();
   }
   
   // Set current view (weekly, conflicts, or categories)
   Future<void> setCurrentView(String view) async {
+    if (_currentView == view) return; // Skip if unchanged
     _currentView = view;
     await _settingsBox.put('currentView', view);
     notifyListeners();
   }
   
-  // Get meetings for a specific day
+  // Cache for meetings by day to improve performance
+  final Map<String, List<Meeting>> _meetingsCache = {};
+  String? _lastCacheKey;
+  
+  // Get meetings for a specific day (with caching)
   List<Meeting> getMeetingsForDay(String day) {
+    final cacheKey = '$day-$_currentWeekType';
+    
+    // Return cached result if available and cache is still valid
+    if (_meetingsCache.containsKey(cacheKey) && _lastCacheKey == cacheKey) {
+      return _meetingsCache[cacheKey]!;
+    }
+    
     final weekTypeEnum = _currentWeekType == 'A' ? WeekType.a : WeekType.b;
     
-    return _meetingsBox.values.where((meeting) {
+    final meetings = _meetingsBox.values.where((meeting) {
       return meeting.days.contains(day) && 
         (meeting.weekType == WeekType.both || 
          meeting.weekType == weekTypeEnum ||
          meeting.weekType == WeekType.monthly ||
          meeting.weekType == WeekType.quarterly);
     }).toList();
+    
+    // Clear cache if week type changed
+    if (_lastCacheKey != null && !_lastCacheKey!.endsWith(_currentWeekType)) {
+      _meetingsCache.clear();
+    }
+    
+    _meetingsCache[cacheKey] = meetings;
+    _lastCacheKey = cacheKey;
+    return meetings;
   }
   
   // Check for meeting conflicts on a specific day

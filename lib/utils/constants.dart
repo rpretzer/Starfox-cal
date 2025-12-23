@@ -1,8 +1,6 @@
-import 'package:flutter/material.dart';
-
 class AppConstants {
   // App name
-  static const String appName = 'Starfox Calendar';
+  static const String appName = 'Sprint Calendar';
   
   // Views
   static const String weeklyView = 'weekly';
@@ -61,7 +59,6 @@ class AppConstants {
   static const String weeklyViewTitle = 'Weekly View';
   static const String conflictsViewTitle = 'Conflicts View';
   static const String categoriesViewTitle = 'Categories View';
-  static const String representationStrategy = 'Representation Strategy';
   
   // Error messages
   static const String errorSavingMeeting = 'Error saving meeting';
@@ -86,30 +83,6 @@ class AppConstants {
     'Monthly': 'Monthly',
     'Quarterly': 'Quarterly',
   };
-  
-  // Representation strategy points
-  static const List<Map<String, String>> representationStrategyPoints = [
-    {
-      'title': 'Essential Attendance',
-      'content': 'All Starfox members should attend Daily Stand-up and Iteration Retro/Planning',
-    },
-    {
-      'title': 'Cross-functional Representation',
-      'content': 'Ensure at least one MBL ART member attends key RDS meetings and vice versa',
-    },
-    {
-      'title': 'Rotation System',
-      'content': 'Create a rotation for Enterprise-wide meetings and Bank Partner Office Hours',
-    },
-    {
-      'title': 'Critical Meetings',
-      'content': 'PI Planning (quarterly) requires full team attendance',
-    },
-    {
-      'title': 'Conflict Management',
-      'content': 'For noon conflicts (especially Tuesday/Thursday), create a clear rotation schedule',
-    },
-  ];
   
   // Key conflict days
   static const List<Map<String, String>> keyConflictDays = [

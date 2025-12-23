@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:starfox_calendar/models/meeting.dart';
 import 'package:starfox_calendar/screens/meeting_detail_screen.dart';
+import 'package:starfox_calendar/screens/settings_screen.dart';
 import 'package:starfox_calendar/services/storage_service.dart';
 import 'package:starfox_calendar/utils/constants.dart';
 import 'package:starfox_calendar/widgets/calendar_header.dart';
@@ -29,11 +30,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
               IconButton(
                 icon: const Icon(Icons.settings),
                 onPressed: () {
-                  // Navigate to settings screen
-                  // For now, just show a snackbar
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Settings coming soon'),
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SettingsScreen(),
                     ),
                   );
                 },

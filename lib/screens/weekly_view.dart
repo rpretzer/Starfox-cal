@@ -3,8 +3,6 @@ import 'package:starfox_calendar/models/meeting.dart';
 import 'package:starfox_calendar/services/storage_service.dart';
 import 'package:starfox_calendar/utils/constants.dart';
 import 'package:starfox_calendar/widgets/day_column.dart';
-import 'package:starfox_calendar/widgets/representation_strategy_card.dart';
-
 class WeeklyView extends StatelessWidget {
   final StorageService storageService;
   final void Function(Meeting) onMeetingTapped;
@@ -17,17 +15,7 @@ class WeeklyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Week days grid
-        Expanded(
-          child: _buildWeekGrid(context),
-        ),
-        
-        // Representation strategy card
-        const RepresentationStrategyCard(),
-      ],
-    );
+    return _buildWeekGrid(context);
   }
   
   // Build the week grid with day columns
@@ -64,16 +52,14 @@ class WeeklyView extends StatelessWidget {
     );
   }
   
-  // Build day columns for each weekday
+  // Build day columns for each weekday (memoized)
   List<Widget> _buildDayColumns() {
-    return AppConstants.daysOfWeek.asMap().entries.map((entry) {
-      final dayIndex = entry.key;
-      final day = entry.value;
-      
+    return AppConstants.daysOfWeek.map((day) {
       // Get meetings for this day
       final meetings = storageService.getMeetingsForDay(day);
       
       return Expanded(
+        key: ValueKey('$day-${storageService.currentWeekType}'),
         child: DayColumn(
           day: day,
           meetings: meetings,

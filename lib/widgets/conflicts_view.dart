@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:starfox_calendar/models/meeting.dart';
 import 'package:starfox_calendar/services/storage_service.dart';
 import 'package:starfox_calendar/utils/constants.dart';
-import 'package:starfox_calendar/widgets/representation_strategy_card.dart';
-
-class ConflictsView extends StatelessWidget {
+class ConflictsView extends StatefulWidget {
   final StorageService storageService;
   final void Function(Meeting) onMeetingTapped;
   
@@ -15,38 +13,44 @@ class ConflictsView extends StatelessWidget {
   });
 
   @override
+  State<ConflictsView> createState() => _ConflictsViewState();
+}
+
+class _ConflictsViewState extends State<ConflictsView> {
+  // Get all conflicts for all days (memoized)
+  List<Map<String, dynamic>>? _cachedConflicts;
+  String? _lastConflictsCacheKey;
+  
+  List<Map<String, dynamic>> _getAllConflicts() {
+    final cacheKey = '${widget.storageService.currentWeekType}-${widget.storageService.meetings.length}';
+    
+    if (_cachedConflicts != null && _lastConflictsCacheKey == cacheKey) {
+      return _cachedConflicts!;
+    }
+    
+    final allConflicts = <Map<String, dynamic>>[];
+    
+    for (final day in AppConstants.daysOfWeek) {
+      final conflicts = widget.storageService.getConflictsForDay(day);
+      allConflicts.addAll(conflicts);
+    }
+    
+    _cachedConflicts = allConflicts;
+    _lastConflictsCacheKey = cacheKey;
+    return allConflicts;
+  }
+
+  @override
   Widget build(BuildContext context) {
     // Get all conflicts for the entire week
     final allConflicts = _getAllConflicts();
     
-    return Column(
-      children: [
-        // Conflicts list
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(AppConstants.defaultPadding),
-            child: allConflicts.isEmpty
-                ? _buildNoConflictsMessage(context)
-                : _buildConflictsList(context, allConflicts),
-          ),
-        ),
-        
-        // Representation strategy card
-        const RepresentationStrategyCard(),
-      ],
+    return Container(
+      padding: const EdgeInsets.all(AppConstants.defaultPadding),
+      child: allConflicts.isEmpty
+          ? _buildNoConflictsMessage(context)
+          : _buildConflictsList(context, allConflicts),
     );
-  }
-  
-  // Get all conflicts for all days
-  List<Map<String, dynamic>> _getAllConflicts() {
-    final allConflicts = <Map<String, dynamic>>[];
-    
-    for (final day in AppConstants.daysOfWeek) {
-      final conflicts = storageService.getConflictsForDay(day);
-      allConflicts.addAll(conflicts);
-    }
-    
-    return allConflicts;
   }
   
   // Build message for when there are no conflicts
@@ -118,7 +122,7 @@ class ConflictsView extends StatelessWidget {
     
     // Get the actual meeting objects
     final meetings = meetingIds
-        .map((id) => storageService.getMeeting(id))
+        .map((id) => widget.storageService.getMeeting(id))
         .where((meeting) => meeting != null)
         .cast<Meeting>()
         .toList();
@@ -168,7 +172,7 @@ class ConflictsView extends StatelessWidget {
             
             ...meetings.map((meeting) {
               // Get category for this meeting
-              final category = storageService.getCategory(meeting.categoryId);
+              final category = widget.storageService.getCategory(meeting.categoryId);
               
               return ListTile(
                 dense: true,
@@ -186,7 +190,7 @@ class ConflictsView extends StatelessWidget {
                   meeting.requiresAttendance,
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
-                onTap: () => onMeetingTapped(meeting),
+                onTap: () => widget.onMeetingTapped(meeting),
               );
             }).toList(),
             

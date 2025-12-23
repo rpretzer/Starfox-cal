@@ -5,7 +5,7 @@ import 'package:starfox_calendar/services/storage_service.dart';
 import 'package:starfox_calendar/utils/constants.dart';
 import 'package:starfox_calendar/utils/datetime_utils.dart';
 
-class MeetingCard extends StatefulWidget {
+class MeetingCard extends StatelessWidget {
   final Meeting meeting;
   final StorageService storageService;
   final VoidCallback onTap;
@@ -18,19 +18,13 @@ class MeetingCard extends StatefulWidget {
   });
 
   @override
-  State<MeetingCard> createState() => _MeetingCardState();
-}
-
-class _MeetingCardState extends State<MeetingCard> {
-  final GlobalKey _tooltipKey = GlobalKey();
-  
-  @override
   Widget build(BuildContext context) {
     // Get the category for this meeting
-    final category = widget.storageService.getCategory(widget.meeting.categoryId);
+    final category = storageService.getCategory(meeting.categoryId);
     
-    return Draggable<int>(
-      data: widget.meeting.id,
+    return RepaintBoundary(
+      child: Draggable<int>(
+      data: meeting.id,
       feedback: Material(
         borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
         elevation: 8,
@@ -53,7 +47,7 @@ class _MeetingCardState extends State<MeetingCard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                widget.meeting.name,
+                meeting.name,
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                 ),
@@ -62,7 +56,7 @@ class _MeetingCardState extends State<MeetingCard> {
               ),
               const SizedBox(height: 4),
               Text(
-                widget.meeting.time,
+                meeting.time,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
@@ -71,14 +65,15 @@ class _MeetingCardState extends State<MeetingCard> {
       ),
       childWhenDragging: Opacity(
         opacity: 0.5,
-        child: _buildCard(category),
+        child: _buildCard(context, category),
       ),
-      child: _buildCard(category),
+      child: _buildCard(context, category),
+      ),
     );
   }
   
   // Build the actual card UI
-  Widget _buildCard(Category? category) {
+  Widget _buildCard(BuildContext context, Category? category) {
     return Card(
       margin: const EdgeInsets.only(bottom: AppConstants.smallPadding),
       clipBehavior: Clip.antiAlias,
@@ -91,7 +86,7 @@ class _MeetingCardState extends State<MeetingCard> {
         ),
       ),
       child: InkWell(
-        onTap: widget.onTap,
+        onTap: onTap,
         child: Container(
           padding: const EdgeInsets.all(AppConstants.smallPadding),
           child: Stack(
@@ -101,7 +96,7 @@ class _MeetingCardState extends State<MeetingCard> {
                 children: [
                   // Meeting name
                   Text(
-                    widget.meeting.name,
+                    meeting.name,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                     ),
@@ -118,7 +113,7 @@ class _MeetingCardState extends State<MeetingCard> {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        widget.meeting.time,
+                        meeting.time,
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                       
@@ -127,8 +122,8 @@ class _MeetingCardState extends State<MeetingCard> {
                         child: Builder(
                           builder: (context) {
                             final duration = DateTimeUtils.formatTimeDifference(
-                              widget.meeting.startTime, 
-                              widget.meeting.endTime
+                              meeting.startTime, 
+                              meeting.endTime
                             );
                             
                             if (duration.isNotEmpty) {
@@ -150,7 +145,7 @@ class _MeetingCardState extends State<MeetingCard> {
                   
                   // Required attendance
                   Text(
-                    'Who: ${widget.meeting.requiresAttendance}',
+                    'Who: ${meeting.requiresAttendance}',
                     style: Theme.of(context).textTheme.bodySmall,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -162,7 +157,7 @@ class _MeetingCardState extends State<MeetingCard> {
               Positioned(
                 top: 0,
                 right: 0,
-                child: _buildInfoIcon(),
+                child: _buildInfoIcon(context),
               ),
             ],
           ),
@@ -172,15 +167,14 @@ class _MeetingCardState extends State<MeetingCard> {
   }
   
   // Build the info icon that shows additional info when tapped
-  Widget _buildInfoIcon() {
+  Widget _buildInfoIcon(BuildContext context) {
     // Only show icon if there are notes or someone assigned
-    if (widget.meeting.notes.isEmpty && widget.meeting.assignedTo.isEmpty) {
+    if (meeting.notes.isEmpty && meeting.assignedTo.isEmpty) {
       return const SizedBox.shrink();
     }
     
     return GestureDetector(
-      key: _tooltipKey,
-      onTap: _showTooltip,
+      onTap: () => _showTooltip(context),
       child: Container(
         width: 20,
         height: 20,
@@ -200,15 +194,15 @@ class _MeetingCardState extends State<MeetingCard> {
   }
   
   // Show tooltip with meeting details
-  void _showTooltip() {
+  void _showTooltip(BuildContext context) {
     final List<String> content = [];
     
-    if (widget.meeting.notes.isNotEmpty) {
-      content.add('Notes: ${widget.meeting.notes}');
+    if (meeting.notes.isNotEmpty) {
+      content.add('Notes: ${meeting.notes}');
     }
     
-    if (widget.meeting.assignedTo.isNotEmpty) {
-      content.add('Assigned to: ${widget.meeting.assignedTo}');
+    if (meeting.assignedTo.isNotEmpty) {
+      content.add('Assigned to: ${meeting.assignedTo}');
     }
     
     if (content.isEmpty) {
@@ -218,7 +212,7 @@ class _MeetingCardState extends State<MeetingCard> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(widget.meeting.name),
+        title: Text(meeting.name),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -3,8 +3,6 @@ import 'package:starfox_calendar/models/category.dart';
 import 'package:starfox_calendar/models/meeting.dart';
 import 'package:starfox_calendar/services/storage_service.dart';
 import 'package:starfox_calendar/utils/constants.dart';
-import 'package:starfox_calendar/widgets/representation_strategy_card.dart';
-
 class CategoriesView extends StatelessWidget {
   final StorageService storageService;
   final void Function(Meeting) onMeetingTapped;
@@ -17,17 +15,7 @@ class CategoriesView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Categories list
-        Expanded(
-          child: _buildCategoriesList(context),
-        ),
-        
-        // Representation strategy card
-        const RepresentationStrategyCard(),
-      ],
-    );
+    return _buildCategoriesList(context);
   }
   
   // Build the categories list

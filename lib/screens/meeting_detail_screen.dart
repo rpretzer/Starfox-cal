@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:starfox_calendar/models/category.dart';
 import 'package:starfox_calendar/models/meeting.dart';
 import 'package:starfox_calendar/services/storage_service.dart';
 import 'package:starfox_calendar/utils/constants.dart';
@@ -139,7 +138,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           
           // Category dropdown
           DropdownButtonFormField<String>(
-            value: _selectedCategoryId,
+            initialValue: _selectedCategoryId,
             decoration: const InputDecoration(
               labelText: AppConstants.category,
             ),
@@ -174,7 +173,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           
           // Week type dropdown
           DropdownButtonFormField<WeekType>(
-            value: _selectedWeekType,
+            initialValue: _selectedWeekType,
             decoration: const InputDecoration(
               labelText: 'Frequency',
             ),
@@ -196,7 +195,7 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           
           // Day of week dropdown
           DropdownButtonFormField<String>(
-            value: _selectedDayOfWeek,
+            initialValue: _selectedDayOfWeek,
             decoration: const InputDecoration(
               labelText: AppConstants.day,
             ),
@@ -366,7 +365,6 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       final name = _nameController.text;
       final startTime = _startTimeController.text;
       final endTime = _endTimeController.text;
-      final time = '$startTime - $endTime';
       
       // Create or update meeting
       final meeting = Meeting(
