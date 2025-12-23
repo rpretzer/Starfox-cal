@@ -50,7 +50,8 @@ class _DayColumnState extends State<DayColumn> {
     // Use cached sorted meetings
     final sortedMeetings = _getSortedMeetings();
     
-    return DragTarget<int>(
+    return RepaintBoundary(
+      child: DragTarget<int>(
       onWillAccept: (data) => true,
       onAccept: (meetingId) {
         setState(() {
@@ -118,17 +119,20 @@ class _DayColumnState extends State<DayColumn> {
           ),
         );
       },
+      ),
     );
   }
   
   // Build UI when there are no meetings
   Widget _buildEmptyState() {
     return const Center(
-      child: Text(
-        AppConstants.noMeetings,
-        style: TextStyle(
-          color: Colors.grey,
-          fontStyle: FontStyle.italic,
+      child: RepaintBoundary(
+        child: Text(
+          AppConstants.noMeetings,
+          style: TextStyle(
+            color: Colors.grey,
+            fontStyle: FontStyle.italic,
+          ),
         ),
       ),
     );

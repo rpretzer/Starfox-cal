@@ -55,24 +55,26 @@ class _ConflictsViewState extends State<ConflictsView> {
   
   // Build message for when there are no conflicts
   Widget _buildNoConflictsMessage(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.check_circle_outline,
-            size: 48,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          const SizedBox(height: AppConstants.defaultPadding),
-          const Text(
-            AppConstants.noConflicts,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 16,
+    return RepaintBoundary(
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.check_circle_outline,
+              size: 48,
+              color: Theme.of(context).colorScheme.primary,
             ),
-          ),
-        ],
+            const SizedBox(height: AppConstants.defaultPadding),
+            const Text(
+              AppConstants.noConflicts,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -127,7 +129,8 @@ class _ConflictsViewState extends State<ConflictsView> {
         .cast<Meeting>()
         .toList();
     
-    return Card(
+    return RepaintBoundary(
+      child: Card(
       margin: const EdgeInsets.only(bottom: AppConstants.defaultPadding),
       color: Theme.of(context).colorScheme.errorContainer.withOpacity(0.2),
       shape: RoundedRectangleBorder(
@@ -207,6 +210,7 @@ class _ConflictsViewState extends State<ConflictsView> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

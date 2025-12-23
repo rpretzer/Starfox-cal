@@ -39,7 +39,8 @@ class CategoriesView extends StatelessWidget {
         .where((meeting) => meeting.categoryId == category.id)
         .toList();
     
-    return Card(
+    return RepaintBoundary(
+      child: Card(
       margin: const EdgeInsets.only(bottom: AppConstants.defaultPadding),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppConstants.cardBorderRadius),
@@ -75,6 +76,7 @@ class CategoriesView extends StatelessWidget {
                 : _buildMeetingsTable(context, meetings),
           ),
         ],
+      ),
       ),
     );
   }

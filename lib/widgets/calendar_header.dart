@@ -17,7 +17,8 @@ class CalendarHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return RepaintBoundary(
+      child: Container(
       padding: const EdgeInsets.all(AppConstants.defaultPadding),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -67,6 +68,7 @@ class CalendarHeader extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }
