@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
@@ -45,10 +45,14 @@ class _AppInitializerState extends State<AppInitializer> {
       // Step 1: Initialize Hive
       if (kDebugMode) {
         debugPrint('[AppInit] Initializing Hive...');
+        debugPrint('[AppInit] Platform: ${kIsWeb ? "Web" : "Mobile"}');
       }
+      
+      // Initialize Hive - works on both web and mobile
       await Hive.initFlutter();
+      
       if (kDebugMode) {
-        debugPrint('[AppInit] Hive initialized');
+        debugPrint('[AppInit] Hive initialized successfully');
       }
 
       // Step 2: Register adapters
