@@ -85,7 +85,13 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       }
     } else {
       // Adding a new meeting
-      _selectedCategoryId = widget.storageService.categories.first.id;
+      final categories = widget.storageService.categories;
+      if (categories.isNotEmpty) {
+        _selectedCategoryId = categories.first.id;
+      } else {
+        // Fallback if no categories exist (shouldn't happen, but safety check)
+        _selectedCategoryId = '';
+      }
     }
     
     setState(() {

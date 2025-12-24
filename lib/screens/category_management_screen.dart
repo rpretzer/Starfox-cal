@@ -247,7 +247,7 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
                   ),
                 );
                 
-                if (existingCategory.id.isNotEmpty) {
+                if (existingCategory.id.isNotEmpty && existingCategory.id != '') {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('A category with this name already exists'),

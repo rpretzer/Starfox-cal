@@ -16,9 +16,23 @@ class StorageService extends ChangeNotifier {
   String _currentWeekType = 'A';
   String _currentView = 'weekly';
   
-  // Getters
-  List<Meeting> get meetings => _meetingsBox.values.toList();
-  List<models.Category> get categories => _categoriesBox.values.toList();
+  // Getters - with null safety checks
+  List<Meeting> get meetings {
+    try {
+      return _meetingsBox.values.toList();
+    } catch (e) {
+      return [];
+    }
+  }
+  
+  List<models.Category> get categories {
+    try {
+      return _categoriesBox.values.toList();
+    } catch (e) {
+      return [];
+    }
+  }
+  
   String get currentWeekType => _currentWeekType;
   String get currentView => _currentView;
   
@@ -75,7 +89,11 @@ class StorageService extends ChangeNotifier {
   
   // Get a meeting by ID
   Meeting? getMeeting(int id) {
-    return _meetingsBox.get(id);
+    try {
+      return _meetingsBox.get(id);
+    } catch (e) {
+      return null;
+    }
   }
   
   // Get next available meeting ID
@@ -100,7 +118,11 @@ class StorageService extends ChangeNotifier {
   
   // Get a category by ID
   models.Category? getCategory(String id) {
-    return _categoriesBox.get(id);
+    try {
+      return _categoriesBox.get(id);
+    } catch (e) {
+      return null;
+    }
   }
   
   // Check if a category ID exists
@@ -131,31 +153,36 @@ class StorageService extends ChangeNotifier {
   
   // Get meetings for a specific day (with caching)
   List<Meeting> getMeetingsForDay(String day) {
-    final cacheKey = '$day-$_currentWeekType';
-    
-    // Return cached result if available and cache is still valid
-    if (_meetingsCache.containsKey(cacheKey) && _lastCacheKey == cacheKey) {
-      return _meetingsCache[cacheKey]!;
+    try {
+      final cacheKey = '$day-$_currentWeekType';
+      
+      // Return cached result if available and cache is still valid
+      if (_meetingsCache.containsKey(cacheKey) && _lastCacheKey == cacheKey) {
+        return _meetingsCache[cacheKey]!;
+      }
+      
+      final weekTypeEnum = _currentWeekType == 'A' ? WeekType.a : WeekType.b;
+      
+      final meetings = _meetingsBox.values.where((meeting) {
+        return meeting.days.contains(day) && 
+          (meeting.weekType == WeekType.both || 
+           meeting.weekType == weekTypeEnum ||
+           meeting.weekType == WeekType.monthly ||
+           meeting.weekType == WeekType.quarterly);
+      }).toList();
+      
+      // Clear cache if week type changed
+      if (_lastCacheKey != null && !_lastCacheKey!.endsWith(_currentWeekType)) {
+        _meetingsCache.clear();
+      }
+      
+      _meetingsCache[cacheKey] = meetings;
+      _lastCacheKey = cacheKey;
+      return meetings;
+    } catch (e) {
+      // Return empty list if there's an error accessing the box
+      return [];
     }
-    
-    final weekTypeEnum = _currentWeekType == 'A' ? WeekType.a : WeekType.b;
-    
-    final meetings = _meetingsBox.values.where((meeting) {
-      return meeting.days.contains(day) && 
-        (meeting.weekType == WeekType.both || 
-         meeting.weekType == weekTypeEnum ||
-         meeting.weekType == WeekType.monthly ||
-         meeting.weekType == WeekType.quarterly);
-    }).toList();
-    
-    // Clear cache if week type changed
-    if (_lastCacheKey != null && !_lastCacheKey!.endsWith(_currentWeekType)) {
-      _meetingsCache.clear();
-    }
-    
-    _meetingsCache[cacheKey] = meetings;
-    _lastCacheKey = cacheKey;
-    return meetings;
   }
   
   // Check for meeting conflicts on a specific day
