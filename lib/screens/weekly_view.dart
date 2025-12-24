@@ -20,11 +20,13 @@ class WeeklyView extends StatelessWidget {
   
   // Build the week grid with day columns
   Widget _buildWeekGrid(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    
     return LayoutBuilder(
       builder: (context, constraints) {
         // For small screens (e.g. phones in portrait), use a horizontal scrollview
         if (constraints.maxWidth < 600) {
-          return _buildScrollableWeekGrid();
+          return _buildScrollableWeekGrid(context, constraints, screenSize);
         } else {
           // For larger screens, show all days side by side
           return _buildDesktopWeekGrid();
@@ -34,21 +36,28 @@ class WeeklyView extends StatelessWidget {
   }
   
   // Build a scrollable week grid for smaller screens
-  Widget _buildScrollableWeekGrid() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Use 85% of screen width for each day column on mobile
-        final columnWidth = constraints.maxWidth * 0.85;
-        
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: _buildDayColumnsForMobile(columnWidth),
-          ),
-        );
-      },
+  Widget _buildScrollableWeekGrid(
+    BuildContext context,
+    BoxConstraints constraints,
+    Size screenSize,
+  ) {
+    // Use 85% of screen width for each day column on mobile
+    final columnWidth = constraints.maxWidth * 0.85;
+    // Use available height from constraints, or screen height as fallback
+    final columnHeight = constraints.maxHeight.isFinite 
+        ? constraints.maxHeight 
+        : screenSize.height * 0.7; // Use 70% of screen height as fallback
+    
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      child: SizedBox(
+        height: columnHeight,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: _buildDayColumnsForMobile(columnWidth, columnHeight),
+        ),
+      ),
     );
   }
   
@@ -61,13 +70,14 @@ class WeeklyView extends StatelessWidget {
   }
   
   // Build day columns for mobile with fixed width
-  List<Widget> _buildDayColumnsForMobile(double columnWidth) {
+  List<Widget> _buildDayColumnsForMobile(double columnWidth, double columnHeight) {
     return AppConstants.daysOfWeek.map((day) {
       // Get meetings for this day
       final meetings = storageService.getMeetingsForDay(day);
       
       return SizedBox(
         width: columnWidth,
+        height: columnHeight,
         key: ValueKey('$day-${storageService.currentWeekType}'),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4.0),
