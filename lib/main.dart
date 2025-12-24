@@ -246,8 +246,8 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider.value(
-      value: storageService,
+    return ChangeNotifierProvider<StorageService>(
+      create: (_) => storageService,
       child: MaterialApp(
         title: 'Sprint Calendar',
         theme: AppTheme.lightTheme,
