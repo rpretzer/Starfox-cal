@@ -39,43 +39,86 @@ class StorageService extends ChangeNotifier {
   // Initialize the storage
   Future<void> init() async {
     try {
-      // Open Hive boxes
-      _meetingsBox = await Hive.openBox<Meeting>(_meetingsBoxName);
-      _categoriesBox = await Hive.openBox<models.Category>(_categoriesBoxName);
-      _settingsBox = await Hive.openBox<dynamic>(_settingsBoxName);
+      print('[StorageService] Opening Hive boxes...');
+      
+      // Open Hive boxes with error handling for each
+      try {
+        _meetingsBox = await Hive.openBox<Meeting>(_meetingsBoxName);
+        print('[StorageService] Meetings box opened');
+      } catch (e) {
+        print('[StorageService] Error opening meetings box: $e');
+        rethrow;
+      }
+      
+      try {
+        _categoriesBox = await Hive.openBox<models.Category>(_categoriesBoxName);
+        print('[StorageService] Categories box opened');
+      } catch (e) {
+        print('[StorageService] Error opening categories box: $e');
+        rethrow;
+      }
+      
+      try {
+        _settingsBox = await Hive.openBox<dynamic>(_settingsBoxName);
+        print('[StorageService] Settings box opened');
+      } catch (e) {
+        print('[StorageService] Error opening settings box: $e');
+        rethrow;
+      }
       
       // Load saved settings or use defaults
       _currentWeekType = _settingsBox.get('currentWeekType', defaultValue: 'A');
       _currentView = _settingsBox.get('currentView', defaultValue: 'weekly');
+      print('[StorageService] Settings loaded: weekType=$_currentWeekType, view=$_currentView');
       
       // If first run, initialize with default data
       if (_categoriesBox.isEmpty) {
+        print('[StorageService] Categories box is empty, initializing defaults...');
         await _initDefaultCategories();
+      } else {
+        print('[StorageService] Categories box has ${_categoriesBox.length} items');
       }
       
       if (_meetingsBox.isEmpty) {
+        print('[StorageService] Meetings box is empty, initializing defaults...');
         await _initDefaultMeetings();
+      } else {
+        print('[StorageService] Meetings box has ${_meetingsBox.length} items');
       }
+      
+      print('[StorageService] Initialization complete');
     } catch (e, stackTrace) {
-      print('ERROR in StorageService.init(): $e');
-      print('Stack trace: $stackTrace');
+      print('[StorageService] ERROR in init(): $e');
+      print('[StorageService] Stack trace: $stackTrace');
       rethrow; // Re-throw to be caught by main initialization
     }
   }
   
   // Initialize with default categories
   Future<void> _initDefaultCategories() async {
-    final defaultCategories = models.Category.getDefaultCategories();
-    for (final category in defaultCategories) {
-      await _categoriesBox.put(category.id, category);
+    try {
+      final defaultCategories = models.Category.getDefaultCategories();
+      for (final category in defaultCategories) {
+        await _categoriesBox.put(category.id, category);
+      }
+      print('Default categories initialized: ${defaultCategories.length}');
+    } catch (e) {
+      print('Error initializing default categories: $e');
+      rethrow;
     }
   }
   
   // Initialize with default meetings
   Future<void> _initDefaultMeetings() async {
-    final defaultMeetings = Meeting.getDefaultMeetings();
-    for (final meeting in defaultMeetings) {
-      await _meetingsBox.put(meeting.id, meeting);
+    try {
+      final defaultMeetings = Meeting.getDefaultMeetings();
+      for (final meeting in defaultMeetings) {
+        await _meetingsBox.put(meeting.id, meeting);
+      }
+      print('Default meetings initialized: ${defaultMeetings.length}');
+    } catch (e) {
+      print('Error initializing default meetings: $e');
+      rethrow;
     }
   }
   
@@ -104,10 +147,16 @@ class StorageService extends ChangeNotifier {
   
   // Get next available meeting ID
   int getNextMeetingId() {
-    if (_meetingsBox.isEmpty) return 1;
-    return _meetingsBox.values
-        .map((meeting) => meeting.id)
-        .fold(0, (curr, next) => curr > next ? curr : next) + 1;
+    try {
+      if (_meetingsBox.isEmpty) return 1;
+      final maxId = _meetingsBox.values
+          .map((meeting) => meeting.id)
+          .fold(0, (curr, next) => curr > next ? curr : next);
+      return maxId + 1;
+    } catch (e) {
+      // Fallback if there's an error
+      return DateTime.now().millisecondsSinceEpoch;
+    }
   }
   
   // Save or update a category
@@ -133,7 +182,11 @@ class StorageService extends ChangeNotifier {
   
   // Check if a category ID exists
   bool categoryExists(String id) {
-    return _categoriesBox.containsKey(id);
+    try {
+      return _categoriesBox.containsKey(id);
+    } catch (e) {
+      return false;
+    }
   }
   
   // Set current week type (A or B)

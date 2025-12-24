@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
@@ -7,72 +9,116 @@ import 'package:starfox_calendar/screens/calendar_screen.dart';
 import 'package:starfox_calendar/services/storage_service.dart';
 import 'package:starfox_calendar/utils/theme.dart';
 
-// App wrapper that handles initialization
-class AppWrapper extends StatefulWidget {
-  const AppWrapper({super.key});
-
-  @override
-  State<AppWrapper> createState() => _AppWrapperState();
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const AppInitializer());
 }
 
-class _AppWrapperState extends State<AppWrapper> {
+/// App initializer that handles async initialization
+class AppInitializer extends StatefulWidget {
+  const AppInitializer({super.key});
+
+  @override
+  State<AppInitializer> createState() => _AppInitializerState();
+}
+
+class _AppInitializerState extends State<AppInitializer> {
   StorageService? _storageService;
   String? _error;
-  bool _isLoading = true;
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeApp();
+    _initialize();
   }
 
-  Future<void> _initializeApp() async {
+  Future<void> _initialize() async {
+    // Add a small delay to ensure Flutter is ready
+    await Future.delayed(const Duration(milliseconds: 100));
+    
     try {
-      print('Initializing Hive...');
-      // Initialize Hive
+      if (kDebugMode) {
+        debugPrint('[AppInit] Starting initialization...');
+      }
+
+      // Step 1: Initialize Hive
+      if (kDebugMode) {
+        debugPrint('[AppInit] Initializing Hive...');
+      }
       await Hive.initFlutter();
-      print('Hive initialized successfully');
-      
-      // Register Hive adapters (must be registered before opening any boxes)
-      print('Registering Hive adapters...');
-      Hive.registerAdapter(WeekTypeAdapter());
-      Hive.registerAdapter(MeetingAdapter());
-      Hive.registerAdapter(CategoryAdapter());
-      print('Hive adapters registered successfully');
-      
-      // Initialize storage service
-      print('Initializing storage service...');
+      if (kDebugMode) {
+        debugPrint('[AppInit] Hive initialized');
+      }
+
+      // Step 2: Register adapters
+      if (kDebugMode) {
+        debugPrint('[AppInit] Registering adapters...');
+      }
+      if (!Hive.isAdapterRegistered(2)) {
+        Hive.registerAdapter(WeekTypeAdapter());
+      }
+      if (!Hive.isAdapterRegistered(0)) {
+        Hive.registerAdapter(MeetingAdapter());
+      }
+      if (!Hive.isAdapterRegistered(1)) {
+        Hive.registerAdapter(CategoryAdapter());
+      }
+      if (kDebugMode) {
+        debugPrint('[AppInit] Adapters registered');
+      }
+
+      // Step 3: Initialize storage service
+      if (kDebugMode) {
+        debugPrint('[AppInit] Initializing storage service...');
+      }
       final storageService = StorageService();
       await storageService.init();
-      print('Storage service initialized successfully');
-      
+      if (kDebugMode) {
+        debugPrint('[AppInit] Storage service initialized');
+      }
+
+      // Step 4: Update state
       if (mounted) {
         setState(() {
           _storageService = storageService;
-          _isLoading = false;
+          _isInitialized = true;
         });
-        print('App initialized successfully');
+        if (kDebugMode) {
+          debugPrint('[AppInit] Initialization complete');
+        }
       }
     } catch (e, stackTrace) {
-      // Error handling for web - show error in console and render error widget
-      print('ERROR initializing app: $e');
-      print('Stack trace: $stackTrace');
+      if (kDebugMode) {
+        debugPrint('[AppInit] ERROR: $e');
+        debugPrint('[AppInit] Stack trace: $stackTrace');
+      }
       
       if (mounted) {
         setState(() {
-          _error = '${e.toString()}\n\nStack trace:\n$stackTrace';
-          _isLoading = false;
+          _error = _formatError(e, stackTrace);
+          _isInitialized = true; // Set to true so we show error screen
         });
       }
     }
   }
 
+  String _formatError(dynamic error, StackTrace stackTrace) {
+    final buffer = StringBuffer();
+    buffer.writeln('Error: ${error.toString()}');
+    buffer.writeln('');
+    buffer.writeln('Stack trace:');
+    buffer.writeln(stackTrace.toString());
+    return buffer.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
+    if (!_isInitialized) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         home: Scaffold(
+          backgroundColor: AppTheme.lightBackgroundColor,
           body: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -83,12 +129,15 @@ class _AppWrapperState extends State<AppWrapper> {
                   'Sprint Calendar',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryColor,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Loading...',
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  'Initializing...',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.lightSecondaryTextColor,
+                  ),
                 ),
               ],
             ),
@@ -100,31 +149,62 @@ class _AppWrapperState extends State<AppWrapper> {
     if (_error != null) {
       return MaterialApp(
         debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
         home: Scaffold(
-          body: Center(
+          backgroundColor: AppTheme.lightBackgroundColor,
+          appBar: AppBar(
+            title: const Text('Initialization Error'),
+            backgroundColor: AppTheme.dangerColor,
+          ),
+          body: SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Error Loading App',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  const Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: AppTheme.dangerColor,
                   ),
                   const SizedBox(height: 16),
+                  const Text(
+                    'Failed to Initialize App',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                   Container(
+                    width: double.infinity,
                     padding: const EdgeInsets.all(16.0),
                     decoration: BoxDecoration(
-                      color: Colors.red.shade50,
+                      color: AppTheme.dangerColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red.shade200),
+                      border: Border.all(
+                        color: AppTheme.dangerColor.withOpacity(0.3),
+                      ),
                     ),
                     child: SelectableText(
                       _error!,
-                      style: const TextStyle(color: Colors.red),
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                      ),
                     ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _error = null;
+                        _isInitialized = false;
+                      });
+                      _initialize();
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
                   ),
                 ],
               ),
@@ -134,39 +214,36 @@ class _AppWrapperState extends State<AppWrapper> {
       );
     }
 
-    if (_storageService != null) {
-      return MyApp(storageService: _storageService!);
-    }
-
-    // Fallback (shouldn't reach here)
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        body: Center(
-          child: Text(
-            'Unknown state',
-            style: Theme.of(context).textTheme.headlineMedium,
+    if (_storageService == null) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: Scaffold(
+          body: Center(
+            child: Text(
+              'Unknown state',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
           ),
         ),
-      ),
-    );
-  }
-}
+      );
+    }
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(const AppWrapper());
+    return MyApp(storageService: _storageService!);
+  }
 }
 
 class MyApp extends StatelessWidget {
   final StorageService storageService;
-  
-  const MyApp({super.key, required this.storageService});
+
+  const MyApp({
+    super.key,
+    required this.storageService,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => storageService,
+    return ChangeNotifierProvider.value(
+      value: storageService,
       child: MaterialApp(
         title: 'Sprint Calendar',
         theme: AppTheme.lightTheme,

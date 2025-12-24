@@ -74,7 +74,9 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
         _endTimeController.text = times['endTime'] ?? '';
         
         _selectedCategoryId = _meeting!.categoryId;
-        _selectedDayOfWeek = _meeting!.days.first; // Just use the first day for editing
+        _selectedDayOfWeek = _meeting!.days.isNotEmpty 
+            ? _meeting!.days.first 
+            : AppConstants.daysOfWeek.first; // Fallback to Monday if empty
         
         // Set week type
         _selectedWeekType = _meeting!.weekType;
@@ -89,8 +91,17 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
       if (categories.isNotEmpty) {
         _selectedCategoryId = categories.first.id;
       } else {
-        // Fallback if no categories exist (shouldn't happen, but safety check)
+        // Fallback if no categories exist - this should not happen as defaults are loaded
+        // But we'll handle it gracefully
         _selectedCategoryId = '';
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Warning: No categories available. Please add a category first.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
       }
     }
     

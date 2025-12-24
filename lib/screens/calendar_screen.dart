@@ -22,6 +22,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget build(BuildContext context) {
     return Consumer<StorageService>(
       builder: (context, storageService, child) {
+        // Note: Categories and meetings can be empty after initialization
+        // This is normal, so we don't block rendering
+        
         return Scaffold(
           appBar: AppBar(
             title: const Text(AppConstants.appName),

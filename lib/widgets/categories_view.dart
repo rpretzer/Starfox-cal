@@ -22,6 +22,38 @@ class CategoriesView extends StatelessWidget {
   Widget _buildCategoriesList(BuildContext context) {
     final categories = storageService.categories;
     
+    if (categories.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppConstants.largePadding),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.category_outlined,
+                size: 64,
+                color: Colors.grey.shade400,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'No categories yet',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: Colors.grey,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Go to Settings to add categories',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    
     return ListView.builder(
       padding: const EdgeInsets.all(AppConstants.defaultPadding),
       itemCount: categories.length,
