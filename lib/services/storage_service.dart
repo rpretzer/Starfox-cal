@@ -38,22 +38,28 @@ class StorageService extends ChangeNotifier {
   
   // Initialize the storage
   Future<void> init() async {
-    // Open Hive boxes
-    _meetingsBox = await Hive.openBox<Meeting>(_meetingsBoxName);
-    _categoriesBox = await Hive.openBox<models.Category>(_categoriesBoxName);
-    _settingsBox = await Hive.openBox<dynamic>(_settingsBoxName);
-    
-    // Load saved settings or use defaults
-    _currentWeekType = _settingsBox.get('currentWeekType', defaultValue: 'A');
-    _currentView = _settingsBox.get('currentView', defaultValue: 'weekly');
-    
-    // If first run, initialize with default data
-    if (_categoriesBox.isEmpty) {
-      await _initDefaultCategories();
-    }
-    
-    if (_meetingsBox.isEmpty) {
-      await _initDefaultMeetings();
+    try {
+      // Open Hive boxes
+      _meetingsBox = await Hive.openBox<Meeting>(_meetingsBoxName);
+      _categoriesBox = await Hive.openBox<models.Category>(_categoriesBoxName);
+      _settingsBox = await Hive.openBox<dynamic>(_settingsBoxName);
+      
+      // Load saved settings or use defaults
+      _currentWeekType = _settingsBox.get('currentWeekType', defaultValue: 'A');
+      _currentView = _settingsBox.get('currentView', defaultValue: 'weekly');
+      
+      // If first run, initialize with default data
+      if (_categoriesBox.isEmpty) {
+        await _initDefaultCategories();
+      }
+      
+      if (_meetingsBox.isEmpty) {
+        await _initDefaultMeetings();
+      }
+    } catch (e, stackTrace) {
+      print('ERROR in StorageService.init(): $e');
+      print('Stack trace: $stackTrace');
+      rethrow; // Re-throw to be caught by main initialization
     }
   }
   
