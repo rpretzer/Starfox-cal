@@ -28,32 +28,39 @@ class _AppWrapperState extends State<AppWrapper> {
 
   Future<void> _initializeApp() async {
     try {
+      print('Initializing Hive...');
       // Initialize Hive
       await Hive.initFlutter();
+      print('Hive initialized successfully');
       
       // Register Hive adapters (must be registered before opening any boxes)
+      print('Registering Hive adapters...');
       Hive.registerAdapter(WeekTypeAdapter());
       Hive.registerAdapter(MeetingAdapter());
       Hive.registerAdapter(CategoryAdapter());
+      print('Hive adapters registered successfully');
       
       // Initialize storage service
+      print('Initializing storage service...');
       final storageService = StorageService();
       await storageService.init();
+      print('Storage service initialized successfully');
       
       if (mounted) {
         setState(() {
           _storageService = storageService;
           _isLoading = false;
         });
+        print('App initialized successfully');
       }
     } catch (e, stackTrace) {
       // Error handling for web - show error in console and render error widget
-      print('Error initializing app: $e');
+      print('ERROR initializing app: $e');
       print('Stack trace: $stackTrace');
       
       if (mounted) {
         setState(() {
-          _error = e.toString();
+          _error = '${e.toString()}\n\nStack trace:\n$stackTrace';
           _isLoading = false;
         });
       }
