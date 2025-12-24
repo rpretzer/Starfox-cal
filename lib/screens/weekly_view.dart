@@ -20,13 +20,11 @@ class WeeklyView extends StatelessWidget {
   
   // Build the week grid with day columns
   Widget _buildWeekGrid(BuildContext context) {
-    final screenSize = MediaQuery.of(context).size;
-    
     return LayoutBuilder(
       builder: (context, constraints) {
         // For small screens (e.g. phones in portrait), use a horizontal scrollview
         if (constraints.maxWidth < 600) {
-          return _buildScrollableWeekGrid(context, constraints, screenSize);
+          return _buildScrollableWeekGrid(context, constraints);
         } else {
           // For larger screens, show all days side by side
           return _buildDesktopWeekGrid();
@@ -39,14 +37,22 @@ class WeeklyView extends StatelessWidget {
   Widget _buildScrollableWeekGrid(
     BuildContext context,
     BoxConstraints constraints,
-    Size screenSize,
   ) {
     // Use 85% of screen width for each day column on mobile
     final columnWidth = constraints.maxWidth * 0.85;
-    // Use available height from constraints, or screen height as fallback
-    final columnHeight = constraints.maxHeight.isFinite 
-        ? constraints.maxHeight 
-        : screenSize.height * 0.7; // Use 70% of screen height as fallback
+    // Use available height from constraints, or get from MediaQuery as fallback
+    double columnHeight;
+    if (constraints.maxHeight.isFinite) {
+      columnHeight = constraints.maxHeight;
+    } else {
+      // Fallback: try to get from MediaQuery, or use a reasonable default
+      try {
+        final mediaQuery = MediaQuery.of(context);
+        columnHeight = mediaQuery.size.height * 0.7;
+      } catch (e) {
+        columnHeight = 600.0; // Final fallback
+      }
+    }
     
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
