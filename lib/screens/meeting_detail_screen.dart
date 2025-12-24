@@ -144,29 +144,37 @@ class _MeetingDetailScreenState extends State<MeetingDetailScreen> {
           
           // Category dropdown
           DropdownButtonFormField<String>(
-            initialValue: _selectedCategoryId,
+            value: _selectedCategoryId.isEmpty ? null : _selectedCategoryId,
             decoration: const InputDecoration(
               labelText: AppConstants.category,
             ),
-            items: widget.storageService.categories.map((category) {
-              return DropdownMenuItem<String>(
-                value: category.id,
-                child: Row(
-                  children: [
-                    Container(
-                      width: 16,
-                      height: 16,
-                      decoration: BoxDecoration(
-                        color: category.color,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
+            items: widget.storageService.categories.isEmpty
+                ? [
+                    const DropdownMenuItem<String>(
+                      value: null,
+                      enabled: false,
+                      child: Text('No categories available'),
                     ),
-                    const SizedBox(width: 8),
-                    Text(category.name),
-                  ],
-                ),
-              );
-            }).toList(),
+                  ]
+                : widget.storageService.categories.map((category) {
+                    return DropdownMenuItem<String>(
+                      value: category.id,
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 16,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              color: category.color,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(category.name),
+                        ],
+                      ),
+                    );
+                  }).toList(),
             onChanged: (value) {
               if (value != null) {
                 setState(() {
