@@ -13,23 +13,35 @@
   <title>Starfox Calendar</title>
   <link rel="manifest" href="manifest.json">
   <script>
+    // Wait for flutter.js to load before initializing
     window.addEventListener('load', function(ev) {
-      _flutter.loader.loadEntrypoint({
-        serviceWorker: {
-          serviceWorkerVersion: {{flutter_service_worker_version}},
-        },
-        onEntrypointLoaded: function(engineInitializer) {
-          engineInitializer.initializeEngine().then(function(appRunner) {
-            appRunner.runApp();
-          }).catch(function(error) {
-            console.error('Error initializing Flutter app:', error);
-            document.body.innerHTML = '<div style="padding: 20px; font-family: sans-serif;"><h1>Error Loading App</h1><p>' + error + '</p></div>';
+      // Check if _flutter is available, if not wait for it
+      function initializeFlutter() {
+        if (typeof _flutter !== 'undefined' && _flutter.loader) {
+          _flutter.loader.loadEntrypoint({
+            serviceWorker: {
+              serviceWorkerVersion: {{flutter_service_worker_version}},
+            },
+            onEntrypointLoaded: function(engineInitializer) {
+              engineInitializer.initializeEngine().then(function(appRunner) {
+                appRunner.runApp();
+              }).catch(function(error) {
+                console.error('Error initializing Flutter app:', error);
+                document.body.innerHTML = '<div style="padding: 20px; font-family: sans-serif;"><h1>Error Loading App</h1><p>' + error + '</p><p>Check the browser console (F12) for more details.</p></div>';
+              });
+            }
           });
+        } else {
+          // _flutter not ready yet, wait a bit and try again
+          setTimeout(initializeFlutter, 50);
         }
-      });
+      }
+      
+      // Start initialization
+      initializeFlutter();
     });
   </script>
-  <script src="flutter.js" defer></script>
+  <script src="flutter.js"></script>
 </head>
 <body>
 </body>
