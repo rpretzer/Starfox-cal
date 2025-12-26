@@ -30,56 +30,91 @@ class _AppInitializerState extends State<AppInitializer> {
   @override
   void initState() {
     super.initState();
-    _initialize();
+    // Use a microtask to ensure the widget tree is built before async initialization
+    Future.microtask(() => _initialize());
   }
 
   Future<void> _initialize() async {
-    // Add a small delay to ensure Flutter is ready
-    await Future.delayed(const Duration(milliseconds: 100));
+    // Add a small delay to ensure Flutter is ready, especially on web
+    await Future.delayed(const Duration(milliseconds: 50));
     
     try {
       if (kDebugMode) {
         debugPrint('[AppInit] Starting initialization...');
+        debugPrint('[AppInit] Platform: ${kIsWeb ? "Web" : "Mobile"}');
       }
 
       // Step 1: Initialize Hive
       if (kDebugMode) {
-        debugPrint('[AppInit] Initializing Hive...');
-        debugPrint('[AppInit] Platform: ${kIsWeb ? "Web" : "Mobile"}');
+        debugPrint('[AppInit] Step 1: Initializing Hive...');
       }
       
-      // Initialize Hive - works on both web and mobile
-      await Hive.initFlutter();
-      
-      if (kDebugMode) {
-        debugPrint('[AppInit] Hive initialized successfully');
+      try {
+        await Hive.initFlutter();
+        if (kDebugMode) {
+          debugPrint('[AppInit] Hive initialized successfully');
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('[AppInit] Hive.initFlutter() error: $e');
+        }
+        // On web, Hive might already be initialized, try to continue
+        if (kIsWeb) {
+          if (kDebugMode) {
+            debugPrint('[AppInit] Continuing on web despite Hive init error...');
+          }
+        } else {
+          rethrow;
+        }
       }
 
-      // Step 2: Register adapters
+      // Step 2: Register adapters (order matters - register enums before classes that use them)
       if (kDebugMode) {
-        debugPrint('[AppInit] Registering adapters...');
+        debugPrint('[AppInit] Step 2: Registering adapters...');
       }
+      
+      // Register WeekType enum adapter first (typeId: 2)
       if (!Hive.isAdapterRegistered(2)) {
         Hive.registerAdapter(WeekTypeAdapter());
+        if (kDebugMode) {
+          debugPrint('[AppInit] WeekTypeAdapter (typeId: 2) registered');
+        }
+      } else if (kDebugMode) {
+        debugPrint('[AppInit] WeekTypeAdapter (typeId: 2) already registered');
       }
+      
+      // Register Meeting adapter (typeId: 0)
       if (!Hive.isAdapterRegistered(0)) {
         Hive.registerAdapter(MeetingAdapter());
+        if (kDebugMode) {
+          debugPrint('[AppInit] MeetingAdapter (typeId: 0) registered');
+        }
+      } else if (kDebugMode) {
+        debugPrint('[AppInit] MeetingAdapter (typeId: 0) already registered');
       }
+      
+      // Register Category adapter (typeId: 1)
       if (!Hive.isAdapterRegistered(1)) {
         Hive.registerAdapter(CategoryAdapter());
+        if (kDebugMode) {
+          debugPrint('[AppInit] CategoryAdapter (typeId: 1) registered');
+        }
+      } else if (kDebugMode) {
+        debugPrint('[AppInit] CategoryAdapter (typeId: 1) already registered');
       }
+      
       if (kDebugMode) {
-        debugPrint('[AppInit] Adapters registered');
+        debugPrint('[AppInit] All adapters registered successfully');
       }
 
       // Step 3: Initialize storage service
       if (kDebugMode) {
-        debugPrint('[AppInit] Initializing storage service...');
+        debugPrint('[AppInit] Step 3: Initializing storage service...');
       }
       final storageService = StorageService();
       await storageService.init();
       if (kDebugMode) {
-        debugPrint('[AppInit] Storage service initialized');
+        debugPrint('[AppInit] Storage service initialized successfully');
       }
 
       // Step 4: Update state
@@ -89,13 +124,23 @@ class _AppInitializerState extends State<AppInitializer> {
           _isInitialized = true;
         });
         if (kDebugMode) {
-          debugPrint('[AppInit] Initialization complete');
+          debugPrint('[AppInit] Initialization complete - app ready');
+        }
+      } else {
+        if (kDebugMode) {
+          debugPrint('[AppInit] Widget not mounted, cannot update state');
         }
       }
     } catch (e, stackTrace) {
       if (kDebugMode) {
-        debugPrint('[AppInit] ERROR: $e');
+        debugPrint('[AppInit] FATAL ERROR: $e');
         debugPrint('[AppInit] Stack trace: $stackTrace');
+      }
+      
+      // Also log to console for web debugging
+      if (kIsWeb) {
+        print('[AppInit] ERROR: $e');
+        print('[AppInit] Stack trace: $stackTrace');
       }
       
       if (mounted) {
@@ -143,6 +188,16 @@ class _AppInitializerState extends State<AppInitializer> {
                     color: AppTheme.lightSecondaryTextColor,
                   ),
                 ),
+                if (kIsWeb && kDebugMode) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'Platform: Web',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.lightSecondaryTextColor,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -179,6 +234,15 @@ class _AppInitializerState extends State<AppInitializer> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  if (kIsWeb)
+                    const Text(
+                      'Check the browser console (F12) for detailed error messages.',
+                      style: TextStyle(
+                        fontStyle: FontStyle.italic,
+                        color: Colors.grey,
+                      ),
+                    ),
                   const SizedBox(height: 24),
                   Container(
                     width: double.infinity,
@@ -204,6 +268,7 @@ class _AppInitializerState extends State<AppInitializer> {
                       setState(() {
                         _error = null;
                         _isInitialized = false;
+                        _storageService = null;
                       });
                       _initialize();
                     },
@@ -223,9 +288,18 @@ class _AppInitializerState extends State<AppInitializer> {
         debugShowCheckedModeBanner: false,
         home: Scaffold(
           body: Center(
-            child: Text(
-              'Unknown state',
-              style: Theme.of(context).textTheme.headlineMedium,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.warning, size: 48, color: Colors.orange),
+                const SizedBox(height: 16),
+                Text(
+                  'Unknown state',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                const SizedBox(height: 8),
+                const Text('Storage service is null'),
+              ],
             ),
           ),
         ),
