@@ -42,24 +42,28 @@ class StorageService extends ChangeNotifier {
       print('[StorageService] Opening Hive boxes...');
       
       // Open Hive boxes with error handling for each
+      // Use a timeout to prevent hanging on web
       try {
-        _meetingsBox = await Hive.openBox<Meeting>(_meetingsBoxName);
-        print('[StorageService] Meetings box opened');
+        _meetingsBox = await Hive.openBox<Meeting>(_meetingsBoxName)
+            .timeout(const Duration(seconds: 10));
+        print('[StorageService] Meetings box opened (${_meetingsBox.length} items)');
       } catch (e) {
         print('[StorageService] Error opening meetings box: $e');
         rethrow;
       }
       
       try {
-        _categoriesBox = await Hive.openBox<models.Category>(_categoriesBoxName);
-        print('[StorageService] Categories box opened');
+        _categoriesBox = await Hive.openBox<models.Category>(_categoriesBoxName)
+            .timeout(const Duration(seconds: 10));
+        print('[StorageService] Categories box opened (${_categoriesBox.length} items)');
       } catch (e) {
         print('[StorageService] Error opening categories box: $e');
         rethrow;
       }
       
       try {
-        _settingsBox = await Hive.openBox<dynamic>(_settingsBoxName);
+        _settingsBox = await Hive.openBox<dynamic>(_settingsBoxName)
+            .timeout(const Duration(seconds: 10));
         print('[StorageService] Settings box opened');
       } catch (e) {
         print('[StorageService] Error opening settings box: $e');
