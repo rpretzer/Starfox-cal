@@ -1,159 +1,96 @@
 # Deployment Guide
 
-## ✅ Setup Complete
+## ✅ GitHub Pages is Your Web Server
 
-The project is now ready for deployment. Here's what has been configured:
+**GitHub Pages IS a web server** - it's a free static hosting service provided by GitHub. You don't need to set up a separate web server!
 
-### 1. Flutter Installation
-- Flutter SDK installed at `~/flutter`
-- Version: 3.38.5 (stable channel)
-- Web support enabled
+## 🚀 How It Works
 
-### 2. Project Build
-- ✅ Dependencies installed
-- ✅ Hive adapters generated
-- ✅ Web build successful (`build/web/`)
+1. **GitHub Actions builds your app** when you push to `main`
+2. **GitHub Pages hosts the files** automatically
+3. **Your app is available** at `https://rpretzer.github.io/Starfox-cal/`
 
-### 3. GitHub Actions Workflow
-- Created `.github/workflows/deploy_web.yml`
-- Automatically builds and deploys on push to `main` branch
-- Uses GitHub Pages for hosting
+## 📋 Setup Steps
 
-## 🚀 Deployment Options
+### Step 1: Enable GitHub Pages
 
-### Option 1: GitHub Pages (Automatic)
+1. Go to your repository: https://github.com/rpretzer/Starfox-cal
+2. Click **Settings** → **Pages**
+3. Under **Source**, select **"GitHub Actions"**
+4. Save the settings
 
-The GitHub Actions workflow automatically deploys to GitHub Pages:
+### Step 2: Verify Deployment
 
-1. **Go to your GitHub repository**: https://github.com/rpretzer/Starfox-cal
+1. Push any commit to `main` branch (or trigger manually)
+2. Go to **Actions** tab in your repository
+3. Wait for "Deploy to GitHub Pages" workflow to complete
+4. Your app will be live at: `https://rpretzer.github.io/Starfox-cal/`
 
-2. **Navigate to Settings** → **Pages**
+## 🌐 Custom Domain Setup (Optional)
 
-3. **Configure the source**:
-   - Source: Select **"GitHub Actions"**
-   - (The workflow will handle the deployment automatically)
+If you want to use `calendar.rspmgmt.com` instead of `rpretzer.github.io`, you have two options:
 
-4. **Push your changes**:
+### Option A: Point Custom Domain to GitHub Pages (Recommended)
+
+1. **In GitHub repository Settings → Pages**:
+   - Add your custom domain: `calendar.rspmgmt.com`
+   - GitHub will provide DNS records to add
+
+2. **Update your DNS** (at your domain registrar):
+   - Add the CNAME or A records GitHub provides
+   - Wait for DNS propagation (can take up to 48 hours)
+
+3. **GitHub Pages will automatically serve your app** at the custom domain
+
+### Option B: Manual Deployment to Custom Server
+
+If you have your own web server at `calendar.rspmgmt.com`:
+
+1. **Build the app**:
    ```bash
-   git add .
-   git commit -m "Your commit message"
-   git push origin main
-   ```
-
-5. **Wait for the workflow to complete**:
-   - Go to **Actions** tab in your repository
-   - Watch the "Deploy to GitHub Pages" workflow run
-   - Once complete, your app will be available at:
-     `https://rpretzer.github.io/Starfox-cal/`
-
-### Option 2: Custom Domain (Manual Deployment)
-
-If you're deploying to a custom domain like `calendar.rspmgmt.com/Starfox-cal/`, you need to manually deploy the files:
-
-1. **Build the web app**:
-   ```bash
-   export PATH="$HOME/flutter/bin:$PATH"
-   cd /home/rpretzer/Starfox-cal
    flutter pub get
    flutter pub run build_runner build --delete-conflicting-outputs
    flutter build web --release --base-href "/Starfox-cal/"
    ```
 
-2. **Deploy all files from `build/web/`** to your web server:
-   - Copy ALL files and folders from `build/web/` to `/Starfox-cal/` on your web server
-   - Required files:
-     - `index.html`
-     - `flutter.js`
-     - `main.dart.js`
-     - `flutter_service_worker.js`
-     - `flutter_bootstrap.js`
-     - `manifest.json`
-     - `version.json`
-     - `assets/` (entire folder)
-     - `canvaskit/` (entire folder)
+2. **Copy files from `build/web/`** to your web server at `/Starfox-cal/`
 
-3. **Verify file permissions**:
-   - Ensure all files are readable by the web server
-   - Ensure the web server can serve `.js`, `.wasm`, `.json`, and other file types
+3. **Ensure your web server** can serve the files
 
-4. **Test the deployment**:
-   - Visit `https://calendar.rspmgmt.com/Starfox-cal/`
-   - Open browser console (F12) and check for errors
-   - Verify `flutter.js` loads: `https://calendar.rspmgmt.com/Starfox-cal/flutter.js`
+## ✅ Current Status
 
-## 📝 Important Notes
+Your GitHub Actions workflow is already configured to:
+- ✅ Build the Flutter web app
+- ✅ Deploy to GitHub Pages automatically
+- ✅ Use the correct base path (`/Starfox-cal/`)
 
-### Base URL
-The app is configured to use `/Starfox-cal/` as the base path. If you change the repository name or deployment path, update:
-- `.github/workflows/deploy_web.yml` (line with `--base-href`)
-- `web/index.html` (base href tag)
-- Rebuild the app with the new base-href
+**You just need to enable GitHub Pages in your repository settings!**
 
-### File Structure
-After building, the `build/web/` directory should contain:
-```
-build/web/
-├── index.html
-├── flutter.js
-├── main.dart.js
-├── flutter_service_worker.js
-├── flutter_bootstrap.js
-├── manifest.json
-├── version.json
-├── assets/
-│   ├── AssetManifest.bin
-│   ├── AssetManifest.bin.json
-│   ├── FontManifest.json
-│   └── ...
-└── canvaskit/
-    ├── canvaskit.js
-    ├── canvaskit.wasm
-    └── ...
-```
+## 🔍 Verify It's Working
 
-### Web Server Configuration
+After enabling GitHub Pages and the workflow completes:
 
-Your web server must:
-1. Serve files from the `/Starfox-cal/` directory
-2. Support MIME types for:
-   - `.js` → `application/javascript`
-   - `.wasm` → `application/wasm`
-   - `.json` → `application/json`
-   - `.bin` → `application/octet-stream`
-3. Enable CORS if needed
-4. Support service workers (HTTPS recommended)
+1. Visit: `https://rpretzer.github.io/Starfox-cal/`
+2. The app should load (no 404 errors)
+3. Check browser console (F12) - should see initialization logs
 
-## 🔧 Troubleshooting
+## 🚨 Troubleshooting
 
-### If files return 404:
-1. **Verify files are deployed**: Check that all files from `build/web/` are on the server
-2. **Check file paths**: Ensure files are in `/Starfox-cal/` directory (not root)
-3. **Verify web server config**: Check that the server is configured to serve from the correct directory
-4. **Check file permissions**: Ensure web server can read all files
+### If you see 404 errors:
+- **Check GitHub Actions**: Go to Actions tab, verify the workflow completed successfully
+- **Check GitHub Pages**: Settings → Pages, verify it's enabled and using "GitHub Actions"
+- **Wait a few minutes**: GitHub Pages can take 1-2 minutes to update after deployment
 
-### If the workflow fails:
-1. Check the Actions tab for error messages
-2. Ensure GitHub Pages is enabled in repository settings
-3. Verify the base-href matches your repository name
+### If using custom domain:
+- **DNS propagation**: Can take up to 48 hours
+- **HTTPS**: GitHub Pages provides free SSL certificates for custom domains
+- **Verify DNS**: Use `dig` or online DNS checker to verify records
 
-### If the app doesn't load:
-1. Check browser console (F12) for errors
-2. Verify the base-href is correct
-3. Clear browser cache and try again
-4. Check network tab to see which files are failing to load
+## 📝 Summary
 
-## 📦 Build Artifacts
+- ✅ **No separate web server needed** - GitHub Pages is your web server
+- ✅ **Automatic deployment** - GitHub Actions handles everything
+- ✅ **Free hosting** - GitHub Pages is free for public repositories
+- ✅ **Just enable it** - Go to Settings → Pages → Select "GitHub Actions"
 
-The web build is located in `build/web/` and contains:
-- `index.html` - Main entry point
-- `flutter.js` - Flutter web runtime
-- `main.dart.js` - Compiled Dart code
-- `assets/` - App assets
-- `canvaskit/` - Flutter rendering engine
-
-## 🚨 Current Issue
-
-If you're seeing 404 errors for `flutter.js` and other files:
-- **The files are not deployed to your web server**
-- You need to copy all files from `build/web/` to your web server at `/Starfox-cal/`
-- Or set up automatic deployment from GitHub Pages to your custom domain
+Once enabled, every push to `main` will automatically deploy your app!
