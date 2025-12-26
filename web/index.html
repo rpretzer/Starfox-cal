@@ -31,8 +31,16 @@
           }
         });
       } else {
-        // _flutter not ready yet, wait a bit and try again
-        setTimeout(initializeFlutter, 50);
+        // _flutter not ready yet, wait a bit and try again (max 10 seconds)
+        var attempts = 0;
+        var maxAttempts = 200; // 200 * 50ms = 10 seconds
+        if (attempts < maxAttempts) {
+          attempts++;
+          setTimeout(initializeFlutter, 50);
+        } else {
+          console.error('_flutter not available after 10 seconds');
+          document.body.innerHTML = '<div style="padding: 20px; font-family: sans-serif;"><h1>Error Loading App</h1><p>Flutter runtime failed to load. Please check:</p><ul><li>The flutter.js file exists</li><li>Check browser console (F12) for errors</li><li>Try refreshing the page</li></ul></div>';
+        }
       }
     }
     
@@ -42,8 +50,35 @@
       setTimeout(initializeFlutter, 100);
     });
   </script>
-  <!-- Load flutter.js - use relative path that works with base href -->
-  <script src="./flutter.js" onerror="console.error('Failed to load flutter.js. Check that the file exists and the path is correct.'); document.body.innerHTML = '<div style=\'padding: 20px; font-family: sans-serif;\'><h1>Error Loading App</h1><p>Failed to load flutter.js. Please check:</p><ul><li>The file exists at the correct path</li><li>The web server is configured correctly</li><li>Check browser console (F12) for details</li></ul></div>';"></script>
+  <!-- Load flutter.js - try multiple path variations -->
+  <script>
+    // Try to load flutter.js with error handling
+    var script = document.createElement('script');
+    script.src = 'flutter.js';
+    script.async = false;
+    script.onerror = function() {
+      console.error('Failed to load flutter.js from relative path. Trying absolute path...');
+      // Try absolute path based on current location
+      var basePath = window.location.pathname;
+      if (basePath.endsWith('/')) {
+        basePath = basePath.slice(0, -1);
+      }
+      var pathParts = basePath.split('/');
+      if (pathParts.length > 1) {
+        var newScript = document.createElement('script');
+        newScript.src = basePath + '/flutter.js';
+        newScript.async = false;
+        newScript.onerror = function() {
+          console.error('Failed to load flutter.js from absolute path: ' + newScript.src);
+          document.body.innerHTML = '<div style="padding: 20px; font-family: sans-serif;"><h1>Error Loading App</h1><p>Failed to load flutter.js. Current path: ' + window.location.pathname + '</p><p>Please check:</p><ul><li>The file exists at: ' + basePath + '/flutter.js</li><li>The web server is configured correctly</li><li>Check browser console (F12) for details</li></ul></div>';
+        };
+        document.head.appendChild(newScript);
+      } else {
+        document.body.innerHTML = '<div style="padding: 20px; font-family: sans-serif;"><h1>Error Loading App</h1><p>Failed to load flutter.js. Please check the browser console (F12) for details.</p></div>';
+      }
+    };
+    document.head.appendChild(script);
+  </script>
 </head>
 <body>
 </body>
