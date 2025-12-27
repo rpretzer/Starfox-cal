@@ -38,6 +38,23 @@ jobs:
       - name: Build web
         run: flutter build web --release --base-href "/Starfox-cal/"
 
+      - name: Verify build output
+        run: |
+          echo "Checking build output..."
+          ls -la build/web/
+          echo ""
+          echo "Checking critical files..."
+          test -f build/web/flutter.js && echo "✅ flutter.js exists" || echo "❌ flutter.js missing"
+          test -f build/web/main.dart.js && echo "✅ main.dart.js exists" || echo "❌ main.dart.js missing"
+          test -f build/web/index.html && echo "✅ index.html exists" || echo "❌ index.html missing"
+          test -f build/web/manifest.json && echo "✅ manifest.json exists" || echo "❌ manifest.json missing"
+          echo ""
+          echo "Checking base href in index.html..."
+          grep -o '<base href="[^"]*"' build/web/index.html || echo "⚠️  base href not found"
+          echo ""
+          echo "Checking for flutter.js reference..."
+          grep -o 'flutter\.js' build/web/index.html || echo "⚠️  flutter.js reference not found"
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
@@ -56,4 +73,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-

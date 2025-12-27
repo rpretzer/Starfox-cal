@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Starfox Calendar - A cross-platform meeting calendar">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="Starfox Calendar">
@@ -12,73 +13,9 @@
   <link rel="icon" type="image/png" href="favicon.png"/>
   <title>Starfox Calendar</title>
   <link rel="manifest" href="manifest.json">
-  <!-- Load flutter.js first, then initialize -->
-  <script>
-    // Function to initialize Flutter app
-    function initializeFlutter() {
-      if (typeof _flutter !== 'undefined' && _flutter.loader) {
-        _flutter.loader.loadEntrypoint({
-          serviceWorker: {
-            serviceWorkerVersion: {{flutter_service_worker_version}},
-          },
-          onEntrypointLoaded: function(engineInitializer) {
-            engineInitializer.initializeEngine().then(function(appRunner) {
-              appRunner.runApp();
-            }).catch(function(error) {
-              console.error('Error initializing Flutter app:', error);
-              document.body.innerHTML = '<div style="padding: 20px; font-family: sans-serif;"><h1>Error Loading App</h1><p>' + error + '</p><p>Check the browser console (F12) for more details.</p></div>';
-            });
-          }
-        });
-      } else {
-        // _flutter not ready yet, wait a bit and try again (max 10 seconds)
-        var attempts = 0;
-        var maxAttempts = 200; // 200 * 50ms = 10 seconds
-        if (attempts < maxAttempts) {
-          attempts++;
-          setTimeout(initializeFlutter, 50);
-        } else {
-          console.error('_flutter not available after 10 seconds');
-          document.body.innerHTML = '<div style="padding: 20px; font-family: sans-serif;"><h1>Error Loading App</h1><p>Flutter runtime failed to load. Please check:</p><ul><li>The flutter.js file exists</li><li>Check browser console (F12) for errors</li><li>Try refreshing the page</li></ul></div>';
-        }
-      }
-    }
-    
-    // Wait for page load and flutter.js to be available
-    window.addEventListener('load', function(ev) {
-      // Start trying to initialize after a short delay
-      setTimeout(initializeFlutter, 100);
-    });
-  </script>
-  <!-- Load flutter.js - try multiple path variations -->
-  <script>
-    // Try to load flutter.js with error handling
-    var script = document.createElement('script');
-    script.src = 'flutter.js';
-    script.async = false;
-    script.onerror = function() {
-      console.error('Failed to load flutter.js from relative path. Trying absolute path...');
-      // Try absolute path based on current location
-      var basePath = window.location.pathname;
-      if (basePath.endsWith('/')) {
-        basePath = basePath.slice(0, -1);
-      }
-      var pathParts = basePath.split('/');
-      if (pathParts.length > 1) {
-        var newScript = document.createElement('script');
-        newScript.src = basePath + '/flutter.js';
-        newScript.async = false;
-        newScript.onerror = function() {
-          console.error('Failed to load flutter.js from absolute path: ' + newScript.src);
-          document.body.innerHTML = '<div style="padding: 20px; font-family: sans-serif;"><h1>Error Loading App</h1><p>Failed to load flutter.js. Current path: ' + window.location.pathname + '</p><p>Please check:</p><ul><li>The file exists at: ' + basePath + '/flutter.js</li><li>The web server is configured correctly</li><li>Check browser console (F12) for details</li></ul></div>';
-        };
-        document.head.appendChild(newScript);
-      } else {
-        document.body.innerHTML = '<div style="padding: 20px; font-family: sans-serif;"><h1>Error Loading App</h1><p>Failed to load flutter.js. Please check the browser console (F12) for details.</p></div>';
-      }
-    };
-    document.head.appendChild(script);
-  </script>
+  <!-- Flutter will inject the initialization script here -->
+  <!-- This file is a template - Flutter will process it during build -->
+  <!-- The {{flutter_service_worker_version}} placeholder will be replaced -->
 </head>
 <body>
 </body>
