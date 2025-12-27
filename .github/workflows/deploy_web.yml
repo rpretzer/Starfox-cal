@@ -36,7 +36,7 @@ jobs:
         run: flutter pub run build_runner build --delete-conflicting-outputs
 
       - name: Build web
-        run: flutter build web --release --base-href "/Starfox-cal/"
+        run: flutter build web --release --base-href "/"
 
       - name: Verify build output
         run: |
