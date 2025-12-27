@@ -38,6 +38,37 @@ class _AppInitializerState extends State<AppInitializer> {
     // Add a small delay to ensure Flutter is ready, especially on web
     await Future.delayed(const Duration(milliseconds: 50));
     
+    // Add timeout to prevent infinite hanging
+    try {
+      await _initializeWithTimeout();
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('[AppInit] FATAL ERROR: $e');
+        debugPrint('[AppInit] Stack trace: $stackTrace');
+      }
+      
+      // Also log to console for web debugging (always, not just debug mode)
+      if (kIsWeb) {
+        print('[AppInit] ERROR: $e');
+        print('[AppInit] Stack trace: $stackTrace');
+        // Also log to window.console for better visibility
+        // ignore: avoid_web_libraries_in_flutter
+        if (kIsWeb) {
+          // ignore: avoid_web_libraries_in_flutter
+          print('[AppInit] Check browser console (F12) for full error details');
+        }
+      }
+      
+      if (mounted) {
+        setState(() {
+          _error = _formatError(e, stackTrace);
+          _isInitialized = true; // Set to true so we show error screen
+        });
+      }
+    }
+  }
+
+  Future<void> _initializeWithTimeout() async {
     try {
       if (kDebugMode) {
         debugPrint('[AppInit] Starting initialization...');
@@ -112,7 +143,16 @@ class _AppInitializerState extends State<AppInitializer> {
         debugPrint('[AppInit] Step 3: Initializing storage service...');
       }
       final storageService = StorageService();
-      await storageService.init();
+      // Add timeout to storage service initialization (30 seconds max)
+      await storageService.init().timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw TimeoutException(
+            'Storage service initialization timed out after 30 seconds',
+            const Duration(seconds: 30),
+          );
+        },
+      );
       if (kDebugMode) {
         debugPrint('[AppInit] Storage service initialized successfully');
       }
@@ -132,23 +172,8 @@ class _AppInitializerState extends State<AppInitializer> {
         }
       }
     } catch (e, stackTrace) {
-      if (kDebugMode) {
-        debugPrint('[AppInit] FATAL ERROR: $e');
-        debugPrint('[AppInit] Stack trace: $stackTrace');
-      }
-      
-      // Also log to console for web debugging
-      if (kIsWeb) {
-        print('[AppInit] ERROR: $e');
-        print('[AppInit] Stack trace: $stackTrace');
-      }
-      
-      if (mounted) {
-        setState(() {
-          _error = _formatError(e, stackTrace);
-          _isInitialized = true; // Set to true so we show error screen
-        });
-      }
+      // Re-throw to be caught by outer try-catch
+      rethrow;
     }
   }
 
@@ -163,7 +188,27 @@ class _AppInitializerState extends State<AppInitializer> {
 
   @override
   Widget build(BuildContext context) {
+    // Always show something - even if not initialized
+    // Add a timeout fallback - if initialization takes too long, show error
     if (!_isInitialized) {
+      // After 5 seconds, if still not initialized, show a message
+      Future.delayed(const Duration(seconds: 5), () {
+        if (mounted && !_isInitialized && _error == null) {
+          setState(() {
+            _error = 'Initialization is taking longer than expected.\n\n'
+                'Please check the browser console (F12) for details.\n\n'
+                'This might be due to:\n'
+                '- Network connectivity issues\n'
+                '- Browser storage (IndexedDB) being blocked\n'
+                '- Service worker conflicts\n\n'
+                'Try:\n'
+                '- Refreshing the page\n'
+                '- Clearing browser cache\n'
+                '- Checking browser console for errors';
+            _isInitialized = true;
+          });
+        }
+      });
       return MaterialApp(
         debugShowCheckedModeBanner: false,
         home: Scaffold(
@@ -188,13 +233,21 @@ class _AppInitializerState extends State<AppInitializer> {
                     color: AppTheme.lightSecondaryTextColor,
                   ),
                 ),
-                if (kIsWeb && kDebugMode) ...[
+                if (kIsWeb) ...[
                   const SizedBox(height: 16),
                   Text(
                     'Platform: Web',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: AppTheme.lightSecondaryTextColor,
                       fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Check console (F12) for details',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppTheme.lightSecondaryTextColor,
+                      fontSize: 12,
                     ),
                   ),
                 ],
