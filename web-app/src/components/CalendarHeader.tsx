@@ -8,21 +8,44 @@ import { useGlobalToast } from '../hooks/useGlobalToast';
 export default function CalendarHeader() {
   const { currentView, currentWeekType, settings, setCurrentView, setCurrentWeekType, getConflictsForDay, meetings } = useStore();
   const { showToast } = useGlobalToast();
-  const [hasConflicts, setHasConflicts] = useState(false);
+  const [conflictsByView, setConflictsByView] = useState<Record<string, boolean>>({});
   const [showShareMenu, setShowShareMenu] = useState(false);
 
-  // Check for conflicts
+  // Check for conflicts per view
   useEffect(() => {
     const checkConflicts = async () => {
-      let conflictsFound = false;
+      const conflicts: Record<string, boolean> = {};
+      
+      // Get today's day name
+      const today = new Date();
+      const dayIndex = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const todayDayName = dayNames[dayIndex];
+      
+      // Check conflicts for Today view (only if today is a workday)
+      if (DAYS_OF_WEEK.some(day => day.startsWith(todayDayName.substring(0, 3)))) {
+        const todayConflicts = await getConflictsForDay(todayDayName);
+        conflicts.categories = todayConflicts.length > 0;
+      } else {
+        conflicts.categories = false;
+      }
+      
+      // Check conflicts for Weekly and Teams views (all days)
+      let weeklyConflicts = false;
       for (const day of DAYS_OF_WEEK) {
         const dayConflicts = await getConflictsForDay(day);
         if (dayConflicts.length > 0) {
-          conflictsFound = true;
+          weeklyConflicts = true;
           break;
         }
       }
-      setHasConflicts(conflictsFound);
+      conflicts.weekly = weeklyConflicts;
+      conflicts.teams = weeklyConflicts;
+      
+      // Monthly view never shows conflicts
+      conflicts.monthly = false;
+      
+      setConflictsByView(conflicts);
     };
     checkConflicts();
     // Re-check periodically and when week type or meetings change
@@ -60,7 +83,7 @@ export default function CalendarHeader() {
                   }`}
                 >
                   {getViewLabel(view)}
-                  {hasConflicts && (view === 'categories' || view === 'weekly' || view === 'teams' || view === 'monthly') && (
+                  {conflictsByView[view] && (
                     <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-white dark:border-gray-800" title="Conflicts detected">
                       <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
                     </span>

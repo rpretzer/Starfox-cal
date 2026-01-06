@@ -11,9 +11,10 @@ interface Conflict {
 
 interface ConflictsContainerProps {
   onMeetingClick: (meeting: Meeting) => void;
+  filterDay?: string; // If provided, only show conflicts for this day (e.g., "Monday", "Tuesday")
 }
 
-export default function ConflictsContainer({ onMeetingClick }: ConflictsContainerProps) {
+export default function ConflictsContainer({ onMeetingClick, filterDay }: ConflictsContainerProps) {
   const { getConflictsForDay, getMeeting, meetings, currentWeekType } = useStore();
   const [conflicts, setConflicts] = useState<Conflict[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -23,9 +24,16 @@ export default function ConflictsContainer({ onMeetingClick }: ConflictsContaine
       setIsLoading(true);
       try {
         const allConflicts: Conflict[] = [];
-        for (const day of DAYS_OF_WEEK) {
-          const dayConflicts = await getConflictsForDay(day);
+        if (filterDay) {
+          // Only load conflicts for the specified day
+          const dayConflicts = await getConflictsForDay(filterDay);
           allConflicts.push(...dayConflicts);
+        } else {
+          // Load conflicts for all days
+          for (const day of DAYS_OF_WEEK) {
+            const dayConflicts = await getConflictsForDay(day);
+            allConflicts.push(...dayConflicts);
+          }
         }
         setConflicts(allConflicts);
       } catch (error) {
@@ -36,7 +44,7 @@ export default function ConflictsContainer({ onMeetingClick }: ConflictsContaine
       }
     };
     loadConflicts();
-  }, [getConflictsForDay, meetings, currentWeekType]);
+  }, [getConflictsForDay, meetings, currentWeekType, filterDay]);
 
   // Don't show if no conflicts
   if (isLoading || conflicts.length === 0) {

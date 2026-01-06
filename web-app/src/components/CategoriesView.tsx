@@ -9,6 +9,16 @@ interface CategoriesViewProps {
 
 export default function CategoriesView({ onMeetingClick }: CategoriesViewProps) {
   const { categories, meetings } = useStore();
+  
+  // Get today's day name (Monday, Tuesday, etc.)
+  const getTodayDayName = (): string => {
+    const today = new Date();
+    const dayIndex = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return dayNames[dayIndex];
+  };
+  
+  const todayDayName = getTodayDayName();
 
   const getMeetingsForCategory = (categoryId: string) => {
     return meetings.filter(m => m.categoryId === categoryId);
@@ -73,7 +83,7 @@ export default function CategoriesView({ onMeetingClick }: CategoriesViewProps) 
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <ConflictsContainer onMeetingClick={onMeetingClick} />
+      <ConflictsContainer onMeetingClick={onMeetingClick} filterDay={todayDayName} />
       {categoriesWithMeetings.map((category) => {
         const categoryMeetings = getMeetingsForCategory(category.id);
         const color = `#${category.colorValue.toString(16).padStart(6, '0')}`;
