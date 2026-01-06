@@ -62,10 +62,18 @@ class StorageAdapter {
 
   async checkAuthAndSwitch(): Promise<void> {
     try {
+      const { isSupabaseConfigured } = await import('./supabase');
+      if (!isSupabaseConfigured) {
+        if (this.useCloud) {
+          this.useCloud = false;
+          await storageService.init();
+        }
+        return;
+      }
+      
       const session = await authService.getSession();
-      const hasSupabaseConfig = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
       const wasUsingCloud = this.useCloud;
-      this.useCloud = !!session && hasSupabaseConfig;
+      this.useCloud = !!session;
 
       // If auth state changed, reinitialize
       if (wasUsingCloud !== this.useCloud) {
