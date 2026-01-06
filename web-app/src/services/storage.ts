@@ -28,6 +28,11 @@ class StorageService {
   private currentView: ViewType = 'weekly';
 
   async init(): Promise<void> {
+    // If already initialized, don't re-initialize
+    if (this.db) {
+      return;
+    }
+    
     try {
       // Add timeout to prevent hanging
       const dbPromise = openDB<CalendarDB>('starfox-calendar', 2, {
@@ -186,15 +191,53 @@ class StorageService {
 
   // Settings
   async setCurrentWeekType(weekType: WeekTypeFilter): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
+    // Initialize if not already initialized
+    if (!this.db) {
+      try {
+        await this.init();
+      } catch (error) {
+        console.warn('Failed to initialize database for setCurrentWeekType:', error);
+        // Still update in-memory state even if persistence fails
+        this.currentWeekType = weekType;
+        return;
+      }
+    }
+    if (!this.db) {
+      // Still update in-memory state even if init failed
+      this.currentWeekType = weekType;
+      return;
+    }
     this.currentWeekType = weekType;
-    await this.db.put('settings', weekType, 'currentWeekType');
+    try {
+      await this.db.put('settings', weekType, 'currentWeekType');
+    } catch (error) {
+      console.warn('Failed to persist week type:', error);
+    }
   }
 
   async setCurrentView(view: ViewType): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
+    // Initialize if not already initialized
+    if (!this.db) {
+      try {
+        await this.init();
+      } catch (error) {
+        console.warn('Failed to initialize database for setCurrentView:', error);
+        // Still update in-memory state even if persistence fails
+        this.currentView = view;
+        return;
+      }
+    }
+    if (!this.db) {
+      // Still update in-memory state even if init failed
+      this.currentView = view;
+      return;
+    }
     this.currentView = view;
-    await this.db.put('settings', view, 'currentView');
+    try {
+      await this.db.put('settings', view, 'currentView');
+    } catch (error) {
+      console.warn('Failed to persist view:', error);
+    }
   }
 
   getCurrentWeekType(): WeekTypeFilter {

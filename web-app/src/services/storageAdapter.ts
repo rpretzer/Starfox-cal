@@ -272,6 +272,12 @@ class StorageAdapter {
 
   async setCurrentView(view: ViewType): Promise<void> {
     if (!this.useCloud) {
+      // Ensure storage service is initialized
+      try {
+        await storageService.init();
+      } catch (error) {
+        console.warn('Failed to initialize storage for setCurrentView:', error);
+      }
       return (storageService as any).setCurrentView(view);
     }
     // For cloud, we could store this in user_settings if needed
@@ -279,6 +285,12 @@ class StorageAdapter {
 
   async setCurrentWeekType(weekType: WeekTypeFilter): Promise<void> {
     if (!this.useCloud) {
+      // Ensure storage service is initialized
+      try {
+        await storageService.init();
+      } catch (error) {
+        console.warn('Failed to initialize storage for setCurrentWeekType:', error);
+      }
       return (storageService as any).setCurrentWeekType(weekType);
     }
     // For cloud, we could store this in user_settings if needed
