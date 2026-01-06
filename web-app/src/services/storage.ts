@@ -29,7 +29,8 @@ class StorageService {
 
   async init(): Promise<void> {
     try {
-      this.db = await openDB<CalendarDB>('starfox-calendar', 2, {
+      // Add timeout to prevent hanging
+      const dbPromise = openDB<CalendarDB>('starfox-calendar', 2, {
         upgrade(db, oldVersion) {
           if (oldVersion < 1) {
             if (!db.objectStoreNames.contains('meetings')) {
@@ -50,6 +51,12 @@ class StorageService {
           }
         },
       });
+
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error('IndexedDB initialization timeout')), 5000)
+      );
+
+      this.db = await Promise.race([dbPromise, timeoutPromise]);
 
       // Load settings
       const weekType = await this.db.get('settings', 'currentWeekType');

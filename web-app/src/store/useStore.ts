@@ -55,32 +55,65 @@ export const useStore = create<AppState>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       
-      // Add timeout to prevent infinite hanging
+      // Add timeout to prevent infinite hanging - reduced to 5 seconds
       const initPromise = storageAdapter.init();
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Initialization timeout')), 10000) // 10 second timeout
+        setTimeout(() => reject(new Error('Initialization timeout - using defaults')), 5000)
       );
       
-      await Promise.race([initPromise, timeoutPromise]);
+      try {
+        await Promise.race([initPromise, timeoutPromise]);
+      } catch (initError) {
+        console.warn('Storage init failed or timed out, using defaults:', initError);
+        // Continue with defaults instead of failing completely
+      }
       
-      const meetings = await storageAdapter.getAllMeetings();
-      const categories = await storageAdapter.getAllCategories();
-      const currentView = storageAdapter.getCurrentView();
-      const currentWeekType = storageAdapter.getCurrentWeekType();
-      const settings = await storageAdapter.getSettings();
+      // Load data with individual timeouts
+      const loadData = async () => {
+        const [meetings, categories, currentView, currentWeekType, settings] = await Promise.allSettled([
+          Promise.race([
+            storageAdapter.getAllMeetings(),
+            new Promise<Meeting[]>((resolve) => setTimeout(() => resolve([]), 2000))
+          ]),
+          Promise.race([
+            storageAdapter.getAllCategories(),
+            new Promise<Category[]>((resolve) => setTimeout(() => resolve([]), 2000))
+          ]),
+          Promise.resolve(storageAdapter.getCurrentView()),
+          Promise.resolve(storageAdapter.getCurrentWeekType()),
+          Promise.race([
+            storageAdapter.getSettings(),
+            new Promise<AppSettings>((resolve) => setTimeout(() => resolve({ monthlyViewEnabled: false, timeFormat: '12h' as const }), 2000))
+          ]),
+        ]);
+
+        const defaultSettings: AppSettings = { monthlyViewEnabled: false, timeFormat: '12h' };
+        
+        return {
+          meetings: meetings.status === 'fulfilled' ? meetings.value : [],
+          categories: categories.status === 'fulfilled' ? categories.value : [],
+          currentView: currentView.status === 'fulfilled' ? currentView.value : ('weekly' as ViewType),
+          currentWeekType: currentWeekType.status === 'fulfilled' ? currentWeekType.value : ('A' as WeekTypeFilter),
+          settings: settings.status === 'fulfilled' ? settings.value : defaultSettings,
+        };
+      };
+
+      const data = await loadData();
       
       set({
-        meetings,
-        categories,
-        currentView,
-        currentWeekType,
-        settings,
+        ...data,
         isLoading: false,
       });
     } catch (error) {
       console.error('Initialization error:', error);
+      // Even on error, show the UI with defaults
       set({
-        error: error instanceof Error ? error.message : 'Failed to initialize',
+        meetings: [],
+        categories: [],
+        currentView: 'weekly',
+        currentWeekType: 'A',
+        settings: { monthlyViewEnabled: false, timeFormat: '12h' as const },
+        error: null, // Don't show error, just use defaults
         isLoading: false,
       });
     }

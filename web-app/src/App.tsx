@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useStore } from './store/useStore';
 import CalendarScreen from './components/CalendarScreen';
 import LoadingScreen from './components/LoadingScreen';
-import ErrorScreen from './components/ErrorScreen';
 // import AuthScreen from './components/AuthScreen'; // Uncomment when requiring authentication
 import ToastContainer, { useToast } from './components/ToastContainer';
 import { setGlobalToast } from './hooks/useGlobalToast';
@@ -10,7 +9,7 @@ import { exchangeGoogleCode, exchangeOutlookCode } from './services/calendarSync
 import { authService, AuthUser } from './services/auth';
 
 function App() {
-  const { init, isLoading, error, saveSyncConfig } = useStore();
+  const { init, isLoading, saveSyncConfig } = useStore();
   const [oauthProcessing, setOauthProcessing] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -243,7 +242,19 @@ function App() {
     handleSupabaseCallback();
   }, []);
 
-  if (checkingAuth) {
+  // Show loading screen with timeout - if it takes too long, show UI anyway
+  const [showLoading, setShowLoading] = useState(true);
+  
+  useEffect(() => {
+    // Force show UI after 3 seconds even if still loading
+    const timer = setTimeout(() => {
+      setShowLoading(false);
+    }, 3000);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  if ((checkingAuth || isLoading || oauthProcessing) && showLoading) {
     return <LoadingScreen />;
   }
 
@@ -254,13 +265,10 @@ function App() {
   //   return <AuthScreen onAuthSuccess={setUser} />;
   // }
 
-  if (isLoading || oauthProcessing) {
-    return <LoadingScreen />;
-  }
-
-  if (error) {
-    return <ErrorScreen error={error} onRetry={init} />;
-  }
+  // Don't show error screen - just show UI with defaults
+  // if (error) {
+  //   return <ErrorScreen error={error} onRetry={init} />;
+  // }
 
   return (
     <>
