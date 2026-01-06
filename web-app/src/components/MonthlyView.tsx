@@ -16,6 +16,7 @@ interface CalendarDay {
   isToday: boolean;
 }
 
+// Days of week in JavaScript Date.getDay() order (0=Sunday, 1=Monday, etc.)
 const FULL_DAYS_OF_WEEK = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -169,9 +170,9 @@ export default function MonthlyView({ onMeetingClick }: MonthlyViewProps) {
 
       {/* Calendar Grid */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
-        {/* Day Headers */}
+        {/* Day Headers - Reorder to start with Monday to match grid offset */}
         <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700">
-          {FULL_DAYS_OF_WEEK.map((day) => {
+          {[...FULL_DAYS_OF_WEEK.slice(1), FULL_DAYS_OF_WEEK[0]].map((day) => {
             // Show only Monday-Friday in header, but keep 7 columns
             const isWorkDay = DAYS_OF_WEEK.some(d => d.startsWith(day.substring(0, 3)));
             return (
