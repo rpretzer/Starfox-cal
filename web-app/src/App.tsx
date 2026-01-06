@@ -160,40 +160,62 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount - don't depend on saveSyncConfig
 
-  // Check authentication on mount
+  // Check authentication on mount (with timeout)
   useEffect(() => {
+    let mounted = true;
+    
     const checkAuth = async () => {
       try {
-        const currentUser = await authService.getCurrentUser();
-        setUser(currentUser);
+        // Add timeout to prevent hanging
+        const authCheck = Promise.race([
+          authService.getCurrentUser(),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000)), // 1 second timeout
+        ]);
+        
+        const currentUser = await authCheck;
+        if (mounted) {
+          setUser(currentUser);
+        }
       } catch (err) {
         console.warn('Auth check failed (using local storage):', err);
         // Continue without authentication - app will use IndexedDB
       } finally {
-        setCheckingAuth(false);
+        if (mounted) {
+          setCheckingAuth(false);
+        }
       }
     };
+    
     checkAuth();
 
     // Listen for auth state changes (only if Supabase is configured)
-    try {
-      const { data: { subscription } } = authService.onAuthStateChange((user) => {
-        setUser(user);
-        if (user) {
-          // Reinitialize store when user logs in
-          init().catch((err) => {
-            console.error('Failed to initialize app:', err);
-          });
-        }
-      });
+    let subscription: { unsubscribe: () => void } | null = null;
+    (async () => {
+      try {
+        const authStateChange = await authService.onAuthStateChange((user) => {
+          if (mounted) {
+            setUser(user);
+            if (user) {
+              // Reinitialize store when user logs in
+              init().catch((err) => {
+                console.error('Failed to initialize app:', err);
+              });
+            }
+          }
+        });
+        
+        subscription = authStateChange.data?.subscription || null;
+      } catch (error) {
+        console.warn('Failed to set up auth listener (using local storage):', error);
+      }
+    })();
 
-      return () => {
+    return () => {
+      mounted = false;
+      if (subscription) {
         subscription.unsubscribe();
-      };
-    } catch (error) {
-      console.warn('Failed to set up auth listener (using local storage):', error);
-      return () => {}; // Return empty cleanup function
-    }
+      }
+    };
   }, [init]);
 
   // Initialize app

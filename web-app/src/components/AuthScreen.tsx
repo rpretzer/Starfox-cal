@@ -31,17 +31,27 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
     });
 
     // Listen for auth state changes
-    const { data: { subscription } } = authService.onAuthStateChange((user) => {
-      if (user) {
-        setCurrentUser(user);
-        onAuthSuccess(user);
-      } else {
-        setCurrentUser(null);
+    let subscription: { unsubscribe: () => void } | null = null;
+    (async () => {
+      try {
+        const authStateChange = await authService.onAuthStateChange((user) => {
+          if (user) {
+            setCurrentUser(user);
+            onAuthSuccess(user);
+          } else {
+            setCurrentUser(null);
+          }
+        });
+        subscription = authStateChange.data?.subscription || null;
+      } catch (error) {
+        console.warn('Failed to set up auth listener:', error);
       }
-    });
+    })();
 
     return () => {
-      subscription.unsubscribe();
+      if (subscription) {
+        subscription.unsubscribe();
+      }
     };
   }, [onAuthSuccess]);
 

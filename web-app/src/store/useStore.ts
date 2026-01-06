@@ -54,7 +54,14 @@ export const useStore = create<AppState>((set, get) => ({
   init: async () => {
     try {
       set({ isLoading: true, error: null });
-      await storageAdapter.init();
+      
+      // Add timeout to prevent infinite hanging
+      const initPromise = storageAdapter.init();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Initialization timeout')), 10000) // 10 second timeout
+      );
+      
+      await Promise.race([initPromise, timeoutPromise]);
       
       const meetings = await storageAdapter.getAllMeetings();
       const categories = await storageAdapter.getAllCategories();

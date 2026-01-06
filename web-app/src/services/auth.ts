@@ -46,7 +46,8 @@ class AuthService {
   async getCurrentUser(): Promise<AuthUser | null> {
     try {
       // Check if Supabase is configured
-      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      const { isSupabaseConfigured } = await import('./supabase');
+      if (!isSupabaseConfigured) {
         return null;
       }
       const { data: { user } } = await supabase.auth.getUser();
@@ -74,11 +75,21 @@ class AuthService {
   async getSession(): Promise<Session | null> {
     try {
       // Check if Supabase is configured
-      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      const { isSupabaseConfigured } = await import('./supabase');
+      if (!isSupabaseConfigured) {
         return null;
       }
-      const { data: { session } } = await supabase.auth.getSession();
-      return session;
+      
+      // Add timeout to prevent hanging
+      const sessionPromise = supabase.auth.getSession();
+      const timeoutPromise = new Promise<null>((resolve) => 
+        setTimeout(() => resolve(null), 2000)
+      );
+      
+      const result = await Promise.race([sessionPromise, timeoutPromise]);
+      if (!result) return null;
+      
+      return result.data?.session || null;
     } catch (error) {
       console.warn('Failed to get session:', error);
       return null;
@@ -148,9 +159,10 @@ class AuthService {
     return { user: data.user, error };
   }
 
-  onAuthStateChange(callback: (user: AuthUser | null) => void) {
+  async onAuthStateChange(callback: (user: AuthUser | null) => void) {
     // Check if Supabase is configured
-    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+    const { isSupabaseConfigured } = await import('./supabase');
+    if (!isSupabaseConfigured) {
       // Return a mock subscription if Supabase is not configured
       return {
         data: {

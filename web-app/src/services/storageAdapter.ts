@@ -15,25 +15,46 @@ class StorageAdapter {
 
   async init(): Promise<void> {
     try {
-      // Check if user is authenticated and Supabase is configured
-      const session = await authService.getSession();
-      const hasSupabaseConfig = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
+      // Check if Supabase is configured first (fast check)
+      const { isSupabaseConfigured } = await import('./supabase');
       
-      this.useCloud = !!session && hasSupabaseConfig;
+      if (!isSupabaseConfigured) {
+        // No Supabase config, use local storage immediately
+        this.useCloud = false;
+        await storageService.init();
+        return;
+      }
 
-      if (this.useCloud) {
-        try {
-          await supabaseStorageService.init();
-        } catch (error) {
-          console.warn('Failed to initialize Supabase, falling back to local storage:', error);
-          this.useCloud = false;
+      // Supabase is configured, check auth with timeout
+      try {
+        const session = await Promise.race([
+          authService.getSession(),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)), // 2 second timeout
+        ]);
+        
+        this.useCloud = !!session;
+
+        if (this.useCloud) {
+          try {
+            await Promise.race([
+              supabaseStorageService.init(),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000)), // 5 second timeout
+            ]);
+          } catch (error) {
+            console.warn('Failed to initialize Supabase, falling back to local storage:', error);
+            this.useCloud = false;
+            await storageService.init();
+          }
+        } else {
           await storageService.init();
         }
-      } else {
+      } catch (error) {
+        console.warn('Auth check failed or timed out, using local storage:', error);
+        this.useCloud = false;
         await storageService.init();
       }
     } catch (error) {
-      console.warn('Auth check failed, using local storage:', error);
+      console.error('Storage initialization error, using local storage:', error);
       this.useCloud = false;
       await storageService.init();
     }
