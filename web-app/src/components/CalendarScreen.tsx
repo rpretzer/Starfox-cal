@@ -4,6 +4,7 @@ import CalendarHeader from './CalendarHeader';
 import WeeklyView from './WeeklyView';
 import ConflictsView from './ConflictsView';
 import CategoriesView from './CategoriesView';
+import MonthlyView from './MonthlyView';
 import MeetingDetailModal from './MeetingDetailModal';
 import SettingsScreen from './SettingsScreen';
 import { Meeting } from '../types';
@@ -49,6 +50,8 @@ export default function CalendarScreen() {
         return <ConflictsView onMeetingClick={handleEditMeeting} />;
       case 'categories':
         return <CategoriesView onMeetingClick={handleEditMeeting} />;
+      case 'monthly':
+        return <MonthlyView onMeetingClick={handleEditMeeting} />;
       default:
         return <div>Unknown view</div>;
     }
