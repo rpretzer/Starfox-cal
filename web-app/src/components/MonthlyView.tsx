@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore';
 import { Meeting } from '../types';
 import { DAYS_OF_WEEK } from '../constants';
 import { formatTime } from '../utils/timeUtils';
+import ConflictsContainer from './ConflictsContainer';
 
 interface MonthlyViewProps {
   onMeetingClick: (meeting: Meeting) => void;
@@ -128,6 +129,7 @@ export default function MonthlyView({ onMeetingClick }: MonthlyViewProps) {
 
   return (
     <div className="w-full">
+      <ConflictsContainer onMeetingClick={onMeetingClick} />
       {/* Month Navigation */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 sm:p-4 mb-3 sm:mb-4">
         <div className="flex items-center justify-between">

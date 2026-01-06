@@ -1,6 +1,7 @@
 import { useStore } from '../store/useStore';
 import { Meeting } from '../types';
 import MeetingCard from './MeetingCard';
+import ConflictsContainer from './ConflictsContainer';
 
 interface CategoriesViewProps {
   onMeetingClick: (meeting: Meeting) => void;
@@ -72,6 +73,7 @@ export default function CategoriesView({ onMeetingClick }: CategoriesViewProps) 
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      <ConflictsContainer onMeetingClick={onMeetingClick} />
       {categoriesWithMeetings.map((category) => {
         const categoryMeetings = getMeetingsForCategory(category.id);
         const color = `#${category.colorValue.toString(16).padStart(6, '0')}`;

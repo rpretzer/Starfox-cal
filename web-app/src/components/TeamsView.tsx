@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import TeamCalendar from './TeamCalendar';
 import { Meeting } from '../types';
+import ConflictsContainer from './ConflictsContainer';
 
 interface TeamsViewProps {
   onMeetingClick: (meeting: Meeting) => void;
@@ -42,6 +43,7 @@ export default function TeamsView({ onMeetingClick }: TeamsViewProps) {
 
   return (
     <div className="space-y-4">
+      <ConflictsContainer onMeetingClick={onMeetingClick} />
       {categories.map((category) => {
         const isExpanded = expandedTeams.has(category.id);
         const color = `#${category.colorValue.toString(16).padStart(6, '0')}`;

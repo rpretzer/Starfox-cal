@@ -31,12 +31,11 @@ export default function CalendarHeader() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentWeekType, meetings]); // Re-check when week type or meetings change
 
-  // Reorder views: categories (Today), weekly, teams, monthly, conflicts
+  // Reorder views: categories (Today), weekly, teams, monthly (no conflicts tab)
   const availableViews: ViewType[] = ['categories', 'weekly', 'teams'];
   if (settings.monthlyViewEnabled) {
     availableViews.push('monthly');
   }
-  availableViews.push('conflicts');
 
   const getViewLabel = (view: ViewType): string => {
     if (view === 'categories') return 'Today';
@@ -61,7 +60,7 @@ export default function CalendarHeader() {
                   }`}
                 >
                   {getViewLabel(view)}
-                  {view === 'conflicts' && hasConflicts && (
+                  {hasConflicts && (view === 'categories' || view === 'weekly' || view === 'teams' || view === 'monthly') && (
                     <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-white dark:border-gray-800" title="Conflicts detected">
                       <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
                     </span>

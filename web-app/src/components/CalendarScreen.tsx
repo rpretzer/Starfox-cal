@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import CalendarHeader from './CalendarHeader';
 import WeeklyView from './WeeklyView';
-import ConflictsView from './ConflictsView';
 import CategoriesView from './CategoriesView';
 import MonthlyView from './MonthlyView';
 import TeamsView from './TeamsView';
@@ -23,7 +22,7 @@ export default function CalendarScreen() {
     const weekParam = params.get('week') as WeekTypeFilter | null;
     const meetingIdParam = params.get('meeting');
 
-    if (viewParam && ['weekly', 'conflicts', 'categories', 'monthly', 'teams'].includes(viewParam)) {
+    if (viewParam && ['weekly', 'categories', 'monthly', 'teams'].includes(viewParam)) {
       setCurrentView(viewParam);
     }
     if (weekParam && (weekParam === 'A' || weekParam === 'B')) {
@@ -74,8 +73,6 @@ export default function CalendarScreen() {
     switch (currentView) {
       case 'weekly':
         return <WeeklyView onMeetingClick={handleEditMeeting} />;
-      case 'conflicts':
-        return <ConflictsView onMeetingClick={handleEditMeeting} />;
       case 'categories':
         return <CategoriesView onMeetingClick={handleEditMeeting} />;
       case 'monthly':
