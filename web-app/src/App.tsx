@@ -43,7 +43,8 @@ function App() {
           }
 
           const pendingConfig = JSON.parse(pendingConfigStr);
-          const redirectUri = `${window.location.origin}${window.location.pathname}`;
+          // Use consistent redirect URI that matches OAuth provider configuration
+          const redirectUri = `${window.location.origin}/auth/callback`;
 
           let accessToken: string;
           let refreshToken: string;

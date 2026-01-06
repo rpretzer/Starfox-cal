@@ -941,7 +941,8 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                               }
                               
                               try {
-                                const redirectUri = `${window.location.origin}${window.location.pathname}`;
+                                // Use a consistent redirect URI that matches Google Cloud Console
+                                const redirectUri = `${window.location.origin}/auth/callback`;
                                 const { url, codeVerifier } = await getGoogleAuthUrl(redirectUri, true, clientId);
                                 
                                 sessionStorage.setItem('pendingSyncConfig', JSON.stringify({
@@ -986,7 +987,8 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                               setSyncFormData({ ...syncFormData, name, provider: 'outlook' });
                               setConnectingProvider('outlook');
                               try {
-                                const redirectUri = `${window.location.origin}${window.location.pathname}`;
+                                // Use a consistent redirect URI that matches Microsoft Azure
+                                const redirectUri = `${window.location.origin}/auth/callback`;
                                 const { url, codeVerifier } = await getOutlookAuthUrl(redirectUri, true, clientId);
                                 
                                 sessionStorage.setItem('pendingSyncConfig', JSON.stringify({
@@ -1185,7 +1187,7 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                                 alert('Please enter Client ID and Calendar ID');
                                 return;
                               }
-                              const redirectUri = `${window.location.origin}${window.location.pathname}`;
+                              const redirectUri = `${window.location.origin}/auth/callback`;
                               const { url } = await getGoogleAuthUrl(redirectUri, false, syncFormData.googleClientId);
                               // Store config temporarily
                               sessionStorage.setItem('pendingSyncConfig', JSON.stringify({
@@ -1240,7 +1242,7 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                                 alert('Please enter Client ID');
                                 return;
                               }
-                              const redirectUri = `${window.location.origin}${window.location.pathname}`;
+                              const redirectUri = `${window.location.origin}/auth/callback`;
                               const { url } = await getOutlookAuthUrl(redirectUri, false, syncFormData.outlookClientId);
                               sessionStorage.setItem('pendingSyncConfig', JSON.stringify({
                                 ...syncFormData,
