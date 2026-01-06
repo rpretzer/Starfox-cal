@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Meeting, Category, ViewType, WeekTypeFilter, AppSettings, MeetingSeries, CalendarSyncConfig } from '../types';
-import { storageService } from '../services/storage';
+import { storageAdapter } from '../services/storageAdapter';
 
 interface AppState {
   meetings: Meeting[];
@@ -54,13 +54,13 @@ export const useStore = create<AppState>((set, get) => ({
   init: async () => {
     try {
       set({ isLoading: true, error: null });
-      await storageService.init();
+      await storageAdapter.init();
       
-      const meetings = await storageService.getAllMeetings();
-      const categories = await storageService.getAllCategories();
-      const currentView = storageService.getCurrentView();
-      const currentWeekType = storageService.getCurrentWeekType();
-      const settings = await storageService.getSettings();
+      const meetings = await storageAdapter.getAllMeetings();
+      const categories = await storageAdapter.getAllCategories();
+      const currentView = storageAdapter.getCurrentView();
+      const currentWeekType = storageAdapter.getCurrentWeekType();
+      const settings = await storageAdapter.getSettings();
       
       set({
         meetings,
@@ -80,34 +80,34 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   refreshMeetings: async () => {
-    const meetings = await storageService.getAllMeetings();
+    const meetings = await storageAdapter.getAllMeetings();
     set({ meetings });
   },
 
   refreshCategories: async () => {
-    const categories = await storageService.getAllCategories();
+    const categories = await storageAdapter.getAllCategories();
     set({ categories });
   },
 
   setCurrentView: async (view: ViewType) => {
-    await storageService.setCurrentView(view);
+    await storageAdapter.setCurrentView(view);
     set({ currentView: view });
   },
 
   setCurrentWeekType: async (weekType: WeekTypeFilter) => {
-    await storageService.setCurrentWeekType(weekType);
+    await storageAdapter.setCurrentWeekType(weekType);
     set({ currentWeekType: weekType });
   },
 
   setMonthlyViewEnabled: async (enabled: boolean) => {
-    await storageService.setMonthlyViewEnabled(enabled);
+    await storageAdapter.setMonthlyViewEnabled(enabled);
     set((state) => ({
       settings: { ...state.settings, monthlyViewEnabled: enabled },
     }));
   },
 
   setTimezone: async (timezone: string | undefined) => {
-    await storageService.setTimezone(timezone);
+    await storageAdapter.setTimezone(timezone);
     set((state) => ({
       settings: { ...state.settings, timezone },
     }));
@@ -115,7 +115,7 @@ export const useStore = create<AppState>((set, get) => ({
 
   setTimeFormat: async (format: '12h' | '24h') => {
     const currentFormat = get().settings.timeFormat;
-    await storageService.setTimeFormat(format);
+    await storageAdapter.setTimeFormat(format);
     
     // Convert all existing meeting times to new format
     if (currentFormat !== format) {
@@ -127,10 +127,10 @@ export const useStore = create<AppState>((set, get) => ({
           startTime: convertTimeFormat(meeting.startTime, currentFormat, format),
           endTime: convertTimeFormat(meeting.endTime, currentFormat, format),
         };
-        await storageService.saveMeeting(updatedMeeting);
+        await storageAdapter.saveMeeting(updatedMeeting);
       }
       // Refresh meetings
-      const updatedMeetings = await storageService.getAllMeetings();
+      const updatedMeetings = await storageAdapter.getAllMeetings();
       set({ meetings: updatedMeetings });
     }
     
@@ -140,21 +140,21 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   setOAuthClientIds: async (clientIds: { google?: string; microsoft?: string; apple?: string }) => {
-    await storageService.setOAuthClientIds(clientIds);
+    await storageAdapter.setOAuthClientIds(clientIds);
     set((state) => ({
       settings: { ...state.settings, oauthClientIds: clientIds },
     }));
   },
 
   setDefaultPublicVisibility: async (visibility: 'private' | 'busy' | 'titles' | 'full') => {
-    await storageService.setDefaultPublicVisibility(visibility);
+    await storageAdapter.setDefaultPublicVisibility(visibility);
     set((state) => ({
       settings: { ...state.settings, defaultPublicVisibility: visibility },
     }));
   },
 
   setPermalinkBaseUrl: async (url?: string) => {
-    await storageService.setPermalinkBaseUrl(url);
+    await storageAdapter.setPermalinkBaseUrl(url);
     set((state) => ({
       settings: { ...state.settings, permalinkBaseUrl: url },
     }));
@@ -170,35 +170,35 @@ export const useStore = create<AppState>((set, get) => ({
         permalink: generateMeetingPermalink(meeting.id, get().settings.permalinkBaseUrl),
       };
     }
-    await storageService.saveMeeting(meetingToSave);
+    await storageAdapter.saveMeeting(meetingToSave);
     await get().refreshMeetings();
   },
 
   deleteMeeting: async (id: number) => {
-    await storageService.deleteMeeting(id);
+    await storageAdapter.deleteMeeting(id);
     await get().refreshMeetings();
   },
 
   saveCategory: async (category: Category) => {
-    await storageService.saveCategory(category);
+    await storageAdapter.saveCategory(category);
     await get().refreshCategories();
   },
 
   deleteCategory: async (id: string) => {
-    await storageService.deleteCategory(id);
+    await storageAdapter.deleteCategory(id);
     await get().refreshCategories();
   },
 
   getMeetingsForDay: async (day: string) => {
-    return storageService.getMeetingsForDay(day);
+    return storageAdapter.getMeetingsForDay(day);
   },
 
   getConflictsForDay: async (day: string) => {
-    return storageService.getConflictsForDay(day);
+    return storageAdapter.getConflictsForDay(day);
   },
 
   moveMeetingToDay: async (meetingId: number, newDay: string) => {
-    await storageService.moveMeetingToDay(meetingId, newDay);
+    await storageAdapter.moveMeetingToDay(meetingId, newDay);
     await get().refreshMeetings();
   },
 
@@ -211,37 +211,37 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   getNextMeetingId: async () => {
-    return storageService.getNextMeetingId();
+    return storageAdapter.getNextMeetingId();
   },
 
   getMeetingSeries: async () => {
-    return storageService.getMeetingSeries();
+    return storageAdapter.getMeetingSeries();
   },
 
   getMeetingsInSeries: async (seriesId: string) => {
-    return storageService.getMeetingsInSeries(seriesId);
+    return storageAdapter.getMeetingsInSeries(seriesId);
   },
 
   updateMeetingSeries: async (seriesId: string, updates: Partial<MeetingSeries>) => {
-    await storageService.updateMeetingSeries(seriesId, updates);
+    await storageAdapter.updateMeetingSeries(seriesId, updates);
     await get().refreshMeetings();
   },
 
   deleteMeetingSeries: async (seriesId: string) => {
-    await storageService.deleteMeetingSeries(seriesId);
+    await storageAdapter.deleteMeetingSeries(seriesId);
     await get().refreshMeetings();
   },
 
   getSyncConfigs: async () => {
-    return storageService.getSyncConfigs();
+    return storageAdapter.getSyncConfigs();
   },
 
   saveSyncConfig: async (config: CalendarSyncConfig & { id: string }) => {
-    await storageService.saveSyncConfig(config);
+    await storageAdapter.saveSyncConfig(config);
   },
 
   deleteSyncConfig: async (id: string) => {
-    await storageService.deleteSyncConfig(id);
+    await storageAdapter.deleteSyncConfig(id);
   },
 }));
 

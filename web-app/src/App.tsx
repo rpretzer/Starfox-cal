@@ -3,13 +3,17 @@ import { useStore } from './store/useStore';
 import CalendarScreen from './components/CalendarScreen';
 import LoadingScreen from './components/LoadingScreen';
 import ErrorScreen from './components/ErrorScreen';
+import AuthScreen from './components/AuthScreen';
 import ToastContainer, { useToast } from './components/ToastContainer';
 import { setGlobalToast } from './hooks/useGlobalToast';
 import { exchangeGoogleCode, exchangeOutlookCode } from './services/calendarSync';
+import { authService, AuthUser } from './services/auth';
 
 function App() {
   const { init, isLoading, error, saveSyncConfig } = useStore();
   const [oauthProcessing, setOauthProcessing] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const { toasts, showToast, removeToast } = useToast();
 
   // Set global toast instance
@@ -156,11 +160,71 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only run once on mount - don't depend on saveSyncConfig
 
+  // Check authentication on mount
   useEffect(() => {
-    init().catch((err) => {
-      console.error('Failed to initialize app:', err);
+    const checkAuth = async () => {
+      try {
+        const currentUser = await authService.getCurrentUser();
+        setUser(currentUser);
+      } catch (err) {
+        console.error('Auth check failed:', err);
+      } finally {
+        setCheckingAuth(false);
+      }
+    };
+    checkAuth();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = authService.onAuthStateChange((user) => {
+      setUser(user);
+      if (user) {
+        // Reinitialize store when user logs in
+        init().catch((err) => {
+          console.error('Failed to initialize app:', err);
+        });
+      }
     });
-  }, []); // Empty deps - init should only run once on mount
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [init]);
+
+  // Initialize app
+  useEffect(() => {
+    if (user) {
+      init().catch((err) => {
+        console.error('Failed to initialize app:', err);
+      });
+    }
+  }, [user, init]);
+
+  // Handle OAuth callback from Supabase
+  useEffect(() => {
+    const handleSupabaseCallback = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      
+      if (code && window.location.pathname === '/auth/callback') {
+        // Supabase handles the callback automatically
+        // Just clean up the URL
+        window.history.replaceState({}, document.title, '/');
+      }
+    };
+    
+    handleSupabaseCallback();
+  }, []);
+
+  if (checkingAuth) {
+    return <LoadingScreen />;
+  }
+
+  // Show auth screen if not authenticated
+  // For now, allow anonymous access (local storage)
+  // Uncomment to require authentication:
+  // if (!user) {
+  //   return <AuthScreen onAuthSuccess={setUser} />;
+  // }
 
   if (isLoading || oauthProcessing) {
     return <LoadingScreen />;
