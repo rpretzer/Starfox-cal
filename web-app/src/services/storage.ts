@@ -14,7 +14,7 @@ interface CalendarDB extends DBSchema {
   };
   settings: {
     key: string;
-    value: string;
+    value: string | boolean;
   };
 }
 
@@ -209,12 +209,23 @@ class StorageService {
   async getSettings(): Promise<{ monthlyViewEnabled: boolean }> {
     if (!this.db) return { monthlyViewEnabled: false };
     const enabled = await this.db.get('settings', 'monthlyViewEnabled');
-    return { monthlyViewEnabled: enabled === 'true' || enabled === true };
+    if (enabled === undefined || enabled === null) {
+      return { monthlyViewEnabled: false };
+    }
+    // Handle both string and boolean values from storage
+    if (typeof enabled === 'boolean') {
+      return { monthlyViewEnabled: enabled };
+    }
+    if (typeof enabled === 'string') {
+      return { monthlyViewEnabled: enabled === 'true' };
+    }
+    return { monthlyViewEnabled: false };
   }
 
   async setMonthlyViewEnabled(enabled: boolean): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
-    await this.db.put('settings', enabled, 'monthlyViewEnabled');
+    // Store as string to match settings schema, but we'll handle both types when reading
+    await this.db.put('settings', enabled.toString(), 'monthlyViewEnabled');
   }
 }
 

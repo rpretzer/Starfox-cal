@@ -4,7 +4,7 @@ interface MonthlyViewProps {
   onMeetingClick: (meeting: Meeting) => void;
 }
 
-export default function MonthlyView({ onMeetingClick }: MonthlyViewProps) {
+export default function MonthlyView({ onMeetingClick: _onMeetingClick }: MonthlyViewProps) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 text-center">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
