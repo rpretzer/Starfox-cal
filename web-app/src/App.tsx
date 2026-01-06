@@ -3,11 +3,19 @@ import { useStore } from './store/useStore';
 import CalendarScreen from './components/CalendarScreen';
 import LoadingScreen from './components/LoadingScreen';
 import ErrorScreen from './components/ErrorScreen';
+import ToastContainer, { useToast } from './components/ToastContainer';
+import { setGlobalToast } from './hooks/useGlobalToast';
 import { exchangeGoogleCode, exchangeOutlookCode } from './services/calendarSync';
 
 function App() {
   const { init, isLoading, error, saveSyncConfig } = useStore();
   const [oauthProcessing, setOauthProcessing] = useState(false);
+  const { toasts, showToast, removeToast } = useToast();
+
+  // Set global toast instance
+  useEffect(() => {
+    setGlobalToast({ showToast });
+  }, [showToast]);
 
   useEffect(() => {
     // Handle OAuth callback - only run once on mount if there's a code
@@ -162,7 +170,12 @@ function App() {
     return <ErrorScreen error={error} onRetry={init} />;
   }
 
-  return <CalendarScreen />;
+  return (
+    <>
+      <CalendarScreen />
+      <ToastContainer toasts={toasts} onClose={removeToast} />
+    </>
+  );
 }
 
 export default App;

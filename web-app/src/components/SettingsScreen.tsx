@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
-import { Category, MeetingSeries, WeekType, CalendarSyncConfig, CalendarProvider } from '../types';
+import { Category, MeetingSeries, WeekType, CalendarSyncConfig, CalendarProvider, AppSettings } from '../types';
 import { syncCalendar, getGoogleAuthUrl, getOutlookAuthUrl, getAppleAuthUrl } from '../services/calendarSync';
 import { getAvailableTimezones, getTimezoneDisplayName, getCurrentTimezone, timeToInputFormat, inputFormatToTime } from '../utils/timeUtils';
+import { useGlobalToast } from '../hooks/useGlobalToast';
 
 interface SettingsScreenProps {
   onClose: () => void;
@@ -44,21 +45,34 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
   const [syncing, setSyncing] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [connectingProvider, setConnectingProvider] = useState<CalendarProvider | null>(null);
+  const { showToast } = useGlobalToast();
+  
+  // Pending settings state
+  const [pendingSettings, setPendingSettings] = useState<Partial<AppSettings>>({});
+  const [hasPendingChanges, setHasPendingChanges] = useState(false);
 
-  const handleAddCategory = () => {
-    if (!newCategoryName.trim()) return;
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) {
+      showToast('Please enter a category name', 'warning');
+      return;
+    }
     
-    const id = newCategoryName.toLowerCase().replace(/\s+/g, '-');
-    const colorValue = parseInt(newCategoryColor.replace('#', ''), 16);
-    
-    saveCategory({
-      id,
-      name: newCategoryName.trim(),
-      colorValue,
-    });
-    
-    setNewCategoryName('');
-    setNewCategoryColor('#4287f5');
+    try {
+      const id = newCategoryName.toLowerCase().replace(/\s+/g, '-');
+      const colorValue = parseInt(newCategoryColor.replace('#', ''), 16);
+      
+      await saveCategory({
+        id,
+        name: newCategoryName.trim(),
+        colorValue,
+      });
+      
+      setNewCategoryName('');
+      setNewCategoryColor('#4287f5');
+      showToast(`Category "${newCategoryName.trim()}" added successfully`, 'success');
+    } catch (error) {
+      showToast(`Failed to add category: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+    }
   };
 
   const handleEditCategory = (category: Category) => {
@@ -67,26 +81,40 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
     setNewCategoryColor(`#${category.colorValue.toString(16).padStart(6, '0')}`);
   };
 
-  const handleSaveCategory = () => {
-    if (!editingCategory || !newCategoryName.trim()) return;
+  const handleSaveCategory = async () => {
+    if (!editingCategory || !newCategoryName.trim()) {
+      showToast('Please enter a category name', 'warning');
+      return;
+    }
     
-    const colorValue = parseInt(newCategoryColor.replace('#', ''), 16);
-    saveCategory({
-      ...editingCategory,
-      name: newCategoryName.trim(),
-      colorValue,
-    });
-    
-    setEditingCategory(null);
-    setNewCategoryName('');
-    setNewCategoryColor('#4287f5');
+    try {
+      const colorValue = parseInt(newCategoryColor.replace('#', ''), 16);
+      await saveCategory({
+        ...editingCategory,
+        name: newCategoryName.trim(),
+        colorValue,
+      });
+      
+      setEditingCategory(null);
+      setNewCategoryName('');
+      setNewCategoryColor('#4287f5');
+      showToast(`Category "${newCategoryName.trim()}" updated successfully`, 'success');
+    } catch (error) {
+      showToast(`Failed to update category: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+    }
   };
 
   const handleDeleteCategory = async (id: string) => {
     if (!confirm('Are you sure you want to delete this team? Meetings assigned to this team will need to be updated or reassigned.')) {
       return;
     }
-    await deleteCategory(id);
+    try {
+      const category = getCategory(id);
+      await deleteCategory(id);
+      showToast(`Category "${category?.name || id}" deleted successfully`, 'success');
+    } catch (error) {
+      showToast(`Failed to delete category: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+    }
   };
 
   const handleCancelEdit = () => {
@@ -222,12 +250,17 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                   </div>
                   <input
                     type="text"
-                    value={settings.oauthClientIds?.google || ''}
+                    value={(pendingSettings.oauthClientIds?.google ?? settings.oauthClientIds?.google) || ''}
                     onChange={(e) => {
-                      setOAuthClientIds({
-                        ...settings.oauthClientIds,
-                        google: e.target.value || undefined,
+                      setPendingSettings({
+                        ...pendingSettings,
+                        oauthClientIds: {
+                          ...settings.oauthClientIds,
+                          ...pendingSettings.oauthClientIds,
+                          google: e.target.value || undefined,
+                        },
                       });
+                      setHasPendingChanges(true);
                     }}
                     placeholder="Enter your Google OAuth Client ID"
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
@@ -252,12 +285,17 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                   </div>
                   <input
                     type="text"
-                    value={settings.oauthClientIds?.microsoft || ''}
+                    value={(pendingSettings.oauthClientIds?.microsoft ?? settings.oauthClientIds?.microsoft) || ''}
                     onChange={(e) => {
-                      setOAuthClientIds({
-                        ...settings.oauthClientIds,
-                        microsoft: e.target.value || undefined,
+                      setPendingSettings({
+                        ...pendingSettings,
+                        oauthClientIds: {
+                          ...settings.oauthClientIds,
+                          ...pendingSettings.oauthClientIds,
+                          microsoft: e.target.value || undefined,
+                        },
                       });
+                      setHasPendingChanges(true);
                     }}
                     placeholder="Enter your Microsoft OAuth Client ID"
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
@@ -279,12 +317,17 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                   </div>
                   <input
                     type="text"
-                    value={settings.oauthClientIds?.apple || ''}
+                    value={(pendingSettings.oauthClientIds?.apple ?? settings.oauthClientIds?.apple) || ''}
                     onChange={(e) => {
-                      setOAuthClientIds({
-                        ...settings.oauthClientIds,
-                        apple: e.target.value || undefined,
+                      setPendingSettings({
+                        ...pendingSettings,
+                        oauthClientIds: {
+                          ...settings.oauthClientIds,
+                          ...pendingSettings.oauthClientIds,
+                          apple: e.target.value || undefined,
+                        },
                       });
+                      setHasPendingChanges(true);
                     }}
                     placeholder="Enter your Apple OAuth Client ID"
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
@@ -314,9 +357,12 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                 </div>
                 <div className="flex gap-2 mt-3">
                   <button
-                    onClick={() => setTimeFormat('12h')}
+                    onClick={() => {
+                      setPendingSettings({ ...pendingSettings, timeFormat: '12h' });
+                      setHasPendingChanges(true);
+                    }}
                     className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
-                      settings.timeFormat === '12h'
+                      (pendingSettings.timeFormat ?? settings.timeFormat) === '12h'
                         ? 'bg-primary text-white'
                         : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
                     }`}
@@ -324,9 +370,12 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                     12 Hour (1:00 PM)
                   </button>
                   <button
-                    onClick={() => setTimeFormat('24h')}
+                    onClick={() => {
+                      setPendingSettings({ ...pendingSettings, timeFormat: '24h' });
+                      setHasPendingChanges(true);
+                    }}
                     className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
-                      settings.timeFormat === '24h'
+                      (pendingSettings.timeFormat ?? settings.timeFormat) === '24h'
                         ? 'bg-primary text-white'
                         : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
                     }`}
@@ -346,10 +395,11 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                 </div>
                 <div className="mt-3">
                   <select
-                    value={settings.timezone || getCurrentTimezone()}
+                    value={pendingSettings.timezone !== undefined ? (pendingSettings.timezone || getCurrentTimezone()) : (settings.timezone || getCurrentTimezone())}
                     onChange={(e) => {
                       const value = e.target.value;
-                      setTimezone(value === getCurrentTimezone() ? undefined : value);
+                      setPendingSettings({ ...pendingSettings, timezone: value === getCurrentTimezone() ? undefined : value });
+                      setHasPendingChanges(true);
                     }}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                   >
@@ -1182,6 +1232,52 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
               )}
             </section>
           </div>
+
+          {/* Apply Button */}
+          {hasPendingChanges && (
+            <div className="sticky bottom-0 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4 mt-8 -mx-4 sm:-mx-6 -mb-4 sm:-mb-6">
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => {
+                    setPendingSettings({});
+                    setHasPendingChanges(false);
+                    showToast('Changes cancelled', 'info');
+                  }}
+                  className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      // Apply pending settings
+                      if (pendingSettings.monthlyViewEnabled !== undefined) {
+                        await setMonthlyViewEnabled(pendingSettings.monthlyViewEnabled);
+                      }
+                      if (pendingSettings.timeFormat !== undefined) {
+                        await setTimeFormat(pendingSettings.timeFormat);
+                      }
+                      if (pendingSettings.timezone !== undefined) {
+                        await setTimezone(pendingSettings.timezone);
+                      }
+                      if (pendingSettings.oauthClientIds !== undefined) {
+                        await setOAuthClientIds(pendingSettings.oauthClientIds);
+                      }
+                      
+                      setPendingSettings({});
+                      setHasPendingChanges(false);
+                      showToast('Settings saved successfully', 'success');
+                    } catch (error) {
+                      showToast(`Failed to save settings: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+                    }
+                  }}
+                  className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -112,7 +112,26 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   setTimeFormat: async (format: '12h' | '24h') => {
+    const currentFormat = get().settings.timeFormat;
     await storageService.setTimeFormat(format);
+    
+    // Convert all existing meeting times to new format
+    if (currentFormat !== format) {
+      const { convertTimeFormat } = await import('../utils/timeConversion');
+      const meetings = get().meetings;
+      for (const meeting of meetings) {
+        const updatedMeeting = {
+          ...meeting,
+          startTime: convertTimeFormat(meeting.startTime, currentFormat, format),
+          endTime: convertTimeFormat(meeting.endTime, currentFormat, format),
+        };
+        await storageService.saveMeeting(updatedMeeting);
+      }
+      // Refresh meetings
+      const updatedMeetings = await storageService.getAllMeetings();
+      set({ meetings: updatedMeetings });
+    }
+    
     set((state) => ({
       settings: { ...state.settings, timeFormat: format },
     }));
