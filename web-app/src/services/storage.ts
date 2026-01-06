@@ -335,7 +335,7 @@ class StorageService {
 
   // Settings
   async getSettings(): Promise<AppSettings> {
-    if (!this.db) return { monthlyViewEnabled: false, timeFormat: '12h' };
+    if (!this.db) return { monthlyViewEnabled: true, timeFormat: '12h' };
     const monthlyEnabled = await this.db.get('settings', 'monthlyViewEnabled');
     const timezone = await this.db.get('settings', 'timezone');
     const timeFormat = await this.db.get('settings', 'timeFormat');
@@ -344,7 +344,7 @@ class StorageService {
     const permalinkBaseUrl = await this.db.get('settings', 'permalinkBaseUrl');
 
     const settings: AppSettings = {
-      monthlyViewEnabled: false,
+      monthlyViewEnabled: true,
       timeFormat: '12h',
     };
 

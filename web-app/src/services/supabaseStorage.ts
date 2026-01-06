@@ -237,13 +237,13 @@ class SupabaseStorageService {
     if (error) {
       if (error.code === 'PGRST116') {
         // No settings found, return defaults
-        return { monthlyViewEnabled: false, timeFormat: '12h' };
+        return { monthlyViewEnabled: true, timeFormat: '12h' };
       }
       throw error;
     }
 
     return {
-      monthlyViewEnabled: data.monthly_view_enabled ?? false,
+      monthlyViewEnabled: data.monthly_view_enabled ?? true,
       timezone: data.timezone ?? undefined,
       timeFormat: (data.time_format as '12h' | '24h') || '12h',
       defaultPublicVisibility: (data.default_public_visibility as any) || 'private',

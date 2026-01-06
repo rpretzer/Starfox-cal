@@ -50,7 +50,7 @@ export const useStore = create<AppState>()(
       categories: [],
       currentView: 'weekly',
       currentWeekType: 'A',
-      settings: { monthlyViewEnabled: false, timeFormat: '12h' },
+      settings: { monthlyViewEnabled: true, timeFormat: '12h' },
       isLoading: true,
       error: null,
 
@@ -96,12 +96,12 @@ export const useStore = create<AppState>()(
             storageAdapter.getSettings(),
             new Promise<AppSettings>((resolve) => setTimeout(() => {
               console.warn('getSettings timeout, using defaults');
-              resolve({ monthlyViewEnabled: false, timeFormat: '12h' as const });
+              resolve({ monthlyViewEnabled: true, timeFormat: '12h' as const });
             }, 5000)) // Increased to 5 seconds
           ]),
         ]);
 
-        const defaultSettings: AppSettings = { monthlyViewEnabled: false, timeFormat: '12h' };
+        const defaultSettings: AppSettings = { monthlyViewEnabled: true, timeFormat: '12h' };
         
         const meetings = meetingsResult.status === 'fulfilled' ? meetingsResult.value : [];
         const categories = categoriesResult.status === 'fulfilled' ? categoriesResult.value : [];
@@ -172,7 +172,7 @@ export const useStore = create<AppState>()(
         categories: [],
         currentView: 'weekly',
         currentWeekType: 'A',
-        settings: { monthlyViewEnabled: false, timeFormat: '12h' as const },
+        settings: { monthlyViewEnabled: true, timeFormat: '12h' as const },
         error: null, // Don't show error, just use defaults
         isLoading: false,
       });
