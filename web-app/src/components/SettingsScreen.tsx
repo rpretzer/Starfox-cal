@@ -453,10 +453,15 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                                   Start Time
                                 </label>
                                 <input
-                                  type="text"
-                                  value={seriesFormData.startTime || ''}
-                                  onChange={(e) => setSeriesFormData({ ...seriesFormData, startTime: e.target.value })}
-                                  placeholder="10:00 AM"
+                                  type="time"
+                                  value={seriesStartTimeInput}
+                                  onChange={(e) => {
+                                    setSeriesStartTimeInput(e.target.value);
+                                    setSeriesFormData({
+                                      ...seriesFormData,
+                                      startTime: inputFormatToTime(e.target.value, settings.timeFormat),
+                                    });
+                                  }}
                                   className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                                 />
                               </div>
