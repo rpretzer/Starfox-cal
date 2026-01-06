@@ -22,6 +22,7 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
     setPermalinkBaseUrl,
     saveCategory,
     deleteCategory,
+    refreshCategories,
     getMeetingSeries,
     updateMeetingSeries,
     deleteMeetingSeries,
@@ -127,13 +128,16 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
     setNewCategoryColor('#4287f5');
   };
 
-  // Load meeting series
+  // Load categories and meeting series on mount
   useEffect(() => {
-    const loadSeries = async () => {
+    const loadData = async () => {
+      // Refresh categories to ensure they're loaded
+      await refreshCategories();
+      // Load meeting series
       const series = await getMeetingSeries();
       setMeetingSeries(series);
     };
-    loadSeries();
+    loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Only load once on mount
 
