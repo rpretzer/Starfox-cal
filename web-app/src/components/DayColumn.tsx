@@ -17,6 +17,11 @@ export default function DayColumn({ day, onMeetingClick }: DayColumnProps) {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [draggedMeetingId, setDraggedMeetingId] = useState<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const touchDragState = useRef<{
+    isActive: boolean;
+    meetingId: number | null;
+    lastTouch: { x: number; y: number } | null;
+  }>({ isActive: false, meetingId: null, lastTouch: null });
 
   useEffect(() => {
     let cancelled = false;
@@ -135,6 +140,132 @@ export default function DayColumn({ day, onMeetingClick }: DayColumnProps) {
     setDragOverIndex(null);
   };
 
+  // Touch drop handler
+  const handleTouchDrop = async (e: React.TouchEvent) => {
+    if (!touchDragState.current.isActive || !touchDragState.current.meetingId) return;
+    
+    e.preventDefault();
+    setIsDragOver(false);
+    
+    const meetingId = touchDragState.current.meetingId;
+    const draggedMeeting = dayMeetings.find(m => m.id === meetingId);
+    const isSameColumn = draggedMeeting !== undefined;
+
+    if (isSameColumn) {
+      // Reordering within the same column
+      const currentIndex = dayMeetings.findIndex(m => m.id === meetingId);
+      if (currentIndex === -1) {
+        touchDragState.current = { isActive: false, meetingId: null, lastTouch: null };
+        return;
+      }
+
+      const targetIndex = dragOverIndex !== null ? dragOverIndex : currentIndex;
+      
+      if (currentIndex === targetIndex) {
+        setDragOverIndex(null);
+        touchDragState.current = { isActive: false, meetingId: null, lastTouch: null };
+        return;
+      }
+
+      const newMeetings = [...dayMeetings];
+      const [removed] = newMeetings.splice(currentIndex, 1);
+      newMeetings.splice(targetIndex, 0, removed);
+      
+      setDayMeetings(newMeetings);
+      setDragOverIndex(null);
+      touchDragState.current = { isActive: false, meetingId: null, lastTouch: null };
+    } else {
+      // Moving to a different day
+      try {
+        const meeting = getMeeting(meetingId);
+        await moveMeetingToDay(meetingId, day);
+        if (meeting) {
+          showToast(`Meeting "${meeting.name}" moved to ${day}`, 'success');
+        }
+      } catch (error) {
+        showToast(`Failed to move meeting: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+      }
+      touchDragState.current = { isActive: false, meetingId: null, lastTouch: null };
+    }
+    
+    setDraggedMeetingId(null);
+  };
+
+  // Listen for touch drag events from MeetingCard
+  useEffect(() => {
+    const handleTouchDragStart = (e: CustomEvent) => {
+      const meetingId = parseInt(e.detail?.meetingId || '0', 10);
+      if (meetingId) {
+        touchDragState.current = {
+          isActive: true,
+          meetingId,
+          lastTouch: null,
+        };
+        setDraggedMeetingId(meetingId);
+      }
+    };
+
+    const handleTouchDragEnd = () => {
+      touchDragState.current = { isActive: false, meetingId: null, lastTouch: null };
+      setIsDragOver(false);
+      setDragOverIndex(null);
+      setDraggedMeetingId(null);
+    };
+
+    // Track touch moves at document level to detect when dragging over this column
+    const handleDocumentTouchMove = (e: TouchEvent) => {
+      if (!touchDragState.current.isActive || !containerRef.current) return;
+      
+      const touch = e.touches[0];
+      if (!touch) return;
+      
+      const rect = containerRef.current.getBoundingClientRect();
+      const isOverColumn = touch.clientX >= rect.left && touch.clientX <= rect.right &&
+                          touch.clientY >= rect.top && touch.clientY <= rect.bottom;
+      
+      if (isOverColumn) {
+        const y = touch.clientY - rect.top;
+        setIsDragOver(true);
+        
+        // Calculate drop index
+        const meetingElements = containerRef.current.querySelectorAll('[data-meeting-id]');
+        let index = 0;
+        for (let i = 0; i < meetingElements.length; i++) {
+          const element = meetingElements[i] as HTMLElement;
+          const elementRect = element.getBoundingClientRect();
+          const elementTop = elementRect.top - rect.top;
+          const elementBottom = elementRect.bottom - rect.top;
+          
+          if (y >= elementTop && y <= elementBottom) {
+            const midPoint = (elementTop + elementBottom) / 2;
+            index = y < midPoint ? i : i + 1;
+            break;
+          } else if (y < elementTop) {
+            index = i;
+            break;
+          } else {
+            index = i + 1;
+          }
+        }
+        
+        setDragOverIndex(index);
+      } else {
+        setIsDragOver(false);
+        setDragOverIndex(null);
+      }
+    };
+
+    window.addEventListener('touchdragstart' as any, handleTouchDragStart);
+    window.addEventListener('touchdragend' as any, handleTouchDragEnd);
+    document.addEventListener('touchmove', handleDocumentTouchMove, { passive: false });
+
+    return () => {
+      window.removeEventListener('touchdragstart' as any, handleTouchDragStart);
+      window.removeEventListener('touchdragend' as any, handleTouchDragEnd);
+      document.removeEventListener('touchmove', handleDocumentTouchMove);
+    };
+  }, [dayMeetings, dragOverIndex, getMeeting, moveMeetingToDay, showToast]);
+
   return (
     <div
       ref={containerRef}
@@ -146,6 +277,7 @@ export default function DayColumn({ day, onMeetingClick }: DayColumnProps) {
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      onTouchEnd={handleTouchDrop}
     >
       <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-2 sm:mb-3 lg:mb-4 text-center text-sm sm:text-base">
         {day}
