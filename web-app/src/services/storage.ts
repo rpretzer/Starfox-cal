@@ -223,6 +223,7 @@ class StorageService {
     const monthlyEnabled = await this.db.get('settings', 'monthlyViewEnabled');
     const timezone = await this.db.get('settings', 'timezone');
     const timeFormat = await this.db.get('settings', 'timeFormat');
+    const oauthClientIds = await this.db.get('settings', 'oauthClientIds');
 
     const settings: AppSettings = {
       monthlyViewEnabled: false,
@@ -250,6 +251,15 @@ class StorageService {
       }
     }
 
+    // Handle OAuth client IDs
+    if (oauthClientIds !== undefined && oauthClientIds !== null && typeof oauthClientIds === 'string') {
+      try {
+        settings.oauthClientIds = JSON.parse(oauthClientIds);
+      } catch {
+        // Invalid JSON, ignore
+      }
+    }
+
     return settings;
   }
 
@@ -270,6 +280,11 @@ class StorageService {
   async setTimeFormat(format: '12h' | '24h'): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
     await this.db.put('settings', format, 'timeFormat');
+  }
+
+  async setOAuthClientIds(clientIds: { google?: string; microsoft?: string; apple?: string }): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    await this.db.put('settings', JSON.stringify(clientIds), 'oauthClientIds');
   }
 
   // Meeting Series Management

@@ -47,6 +47,11 @@ export interface AppSettings {
   monthlyViewEnabled: boolean;
   timezone?: string; // IANA timezone (e.g., 'America/New_York', 'Europe/London')
   timeFormat: '12h' | '24h'; // 12-hour or 24-hour format
+  oauthClientIds?: {
+    google?: string;
+    microsoft?: string;
+    apple?: string;
+  };
 }
 
 export type CalendarProvider = 'google' | 'outlook' | 'ical' | 'apple';

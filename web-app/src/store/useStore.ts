@@ -20,6 +20,7 @@ interface AppState {
   setMonthlyViewEnabled: (enabled: boolean) => Promise<void>;
   setTimezone: (timezone: string | undefined) => Promise<void>;
   setTimeFormat: (format: '12h' | '24h') => Promise<void>;
+  setOAuthClientIds: (clientIds: { google?: string; microsoft?: string; apple?: string }) => Promise<void>;
   saveMeeting: (meeting: Meeting) => Promise<void>;
   deleteMeeting: (id: number) => Promise<void>;
   saveCategory: (category: Category) => Promise<void>;
@@ -114,6 +115,13 @@ export const useStore = create<AppState>((set, get) => ({
     await storageService.setTimeFormat(format);
     set((state) => ({
       settings: { ...state.settings, timeFormat: format },
+    }));
+  },
+
+  setOAuthClientIds: async (clientIds: { google?: string; microsoft?: string; apple?: string }) => {
+    await storageService.setOAuthClientIds(clientIds);
+    set((state) => ({
+      settings: { ...state.settings, oauthClientIds: clientIds },
     }));
   },
 
