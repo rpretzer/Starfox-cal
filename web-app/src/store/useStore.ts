@@ -56,11 +56,20 @@ export const useStore = create<AppState>()(
 
   init: async () => {
     try {
-      // Don't reset isLoading here - it may have been set by persistence rehydration
-      // Just ensure error is null
-      set({ error: null });
+      // Get current state (may have cached data from persistence)
+      const currentState = get();
+      const hasCachedData = currentState.meetings.length > 0 || currentState.categories.length > 0;
       
-      // Add timeout to prevent infinite hanging - reduced to 5 seconds
+      // If we have cached data, show it immediately and refresh in background
+      // Otherwise, show loading state
+      if (!hasCachedData) {
+        set({ isLoading: true, error: null });
+      } else {
+        set({ error: null });
+        console.log('Using cached data, refreshing in background...');
+      }
+      
+      // Initialize storage adapter
       const initPromise = storageAdapter.init();
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Initialization timeout - using defaults')), 5000)
@@ -69,47 +78,57 @@ export const useStore = create<AppState>()(
       try {
         await Promise.race([initPromise, timeoutPromise]);
       } catch (initError) {
-        console.warn('Storage init failed or timed out, using defaults:', initError);
-        // Continue with defaults instead of failing completely
+        console.warn('Storage init failed or timed out, using cached/defaults:', initError);
+        // Continue with cached data or defaults instead of failing completely
       }
       
-      // Load data with individual timeouts - increased timeout for data loading
+      // Load fresh data from storage (this will update cached data if different)
       const loadData = async () => {
         const [meetingsResult, categoriesResult, currentViewResult, currentWeekTypeResult, settingsResult] = await Promise.allSettled([
           Promise.race([
             storageAdapter.getAllMeetings(),
             new Promise<Meeting[]>((resolve) => setTimeout(() => {
-              console.warn('getAllMeetings timeout, using empty array');
+              console.warn('getAllMeetings timeout, keeping cached data');
               resolve([]);
-            }, 5000)) // Increased to 5 seconds
+            }, 5000))
           ]),
           Promise.race([
             storageAdapter.getAllCategories(),
             new Promise<Category[]>((resolve) => setTimeout(() => {
-              console.warn('getAllCategories timeout, using empty array');
+              console.warn('getAllCategories timeout, keeping cached data');
               resolve([]);
-            }, 5000)) // Increased to 5 seconds
+            }, 5000))
           ]),
           Promise.resolve(storageAdapter.getCurrentView()),
           Promise.resolve(storageAdapter.getCurrentWeekType()),
           Promise.race([
             storageAdapter.getSettings(),
             new Promise<AppSettings>((resolve) => setTimeout(() => {
-              console.warn('getSettings timeout, using defaults');
+              console.warn('getSettings timeout, keeping cached settings');
               resolve({ monthlyViewEnabled: true, timeFormat: '12h' as const });
-            }, 5000)) // Increased to 5 seconds
+            }, 5000))
           ]),
         ]);
 
         const defaultSettings: AppSettings = { monthlyViewEnabled: true, timeFormat: '12h' };
         
-        const meetings = meetingsResult.status === 'fulfilled' ? meetingsResult.value : [];
-        const categories = categoriesResult.status === 'fulfilled' ? categoriesResult.value : [];
+        // Merge fresh data with cached data (prefer fresh data if available)
+        const freshMeetings = meetingsResult.status === 'fulfilled' ? meetingsResult.value : null;
+        const freshCategories = categoriesResult.status === 'fulfilled' ? categoriesResult.value : null;
+        const freshView = currentViewResult.status === 'fulfilled' ? currentViewResult.value : null;
+        const freshWeekType = currentWeekTypeResult.status === 'fulfilled' ? currentWeekTypeResult.value : null;
+        const freshSettings = settingsResult.status === 'fulfilled' ? settingsResult.value : null;
         
-        console.log(`Loaded ${meetings.length} meetings and ${categories.length} categories`);
+        // Use fresh data if available, otherwise keep cached data
+        const meetings = freshMeetings !== null && freshMeetings.length > 0 ? freshMeetings : currentState.meetings;
+        const categories = freshCategories !== null && freshCategories.length > 0 ? freshCategories : currentState.categories;
+        const currentView = freshView || currentState.currentView;
+        const currentWeekType = freshWeekType || currentState.currentWeekType;
+        const settings = freshSettings || currentState.settings || defaultSettings;
+        
+        console.log(`Refreshed data: ${meetings.length} meetings, ${categories.length} categories`);
         
         // If no meetings but we have categories, default meetings might still be initializing
-        // Wait a bit and try again
         if (meetings.length === 0 && categories.length > 0) {
           console.log('No meetings found but categories exist, waiting for default initialization...');
           await new Promise(resolve => setTimeout(resolve, 500));
@@ -123,9 +142,9 @@ export const useStore = create<AppState>()(
               return {
                 meetings: refreshedMeetings,
                 categories,
-                currentView: currentViewResult.status === 'fulfilled' ? currentViewResult.value : ('weekly' as ViewType),
-                currentWeekType: currentWeekTypeResult.status === 'fulfilled' ? currentWeekTypeResult.value : ('A' as WeekTypeFilter),
-                settings: settingsResult.status === 'fulfilled' ? settingsResult.value : defaultSettings,
+                currentView,
+                currentWeekType,
+                settings,
               };
             }
           } catch (refreshError) {
@@ -136,21 +155,21 @@ export const useStore = create<AppState>()(
         return {
           meetings,
           categories,
-          currentView: currentViewResult.status === 'fulfilled' ? currentViewResult.value : ('weekly' as ViewType),
-          currentWeekType: currentWeekTypeResult.status === 'fulfilled' ? currentWeekTypeResult.value : ('A' as WeekTypeFilter),
-          settings: settingsResult.status === 'fulfilled' ? settingsResult.value : defaultSettings,
+          currentView,
+          currentWeekType,
+          settings,
         };
       };
 
       const data = await loadData();
       
+      // Update state with merged data
       set({
         ...data,
         isLoading: false,
       });
       
       // Final check: if still no meetings after load, try one more refresh
-      // This handles cases where default initialization is still in progress
       if (data.meetings.length === 0 && data.categories.length > 0) {
         setTimeout(async () => {
           try {
@@ -166,16 +185,24 @@ export const useStore = create<AppState>()(
       }
     } catch (error) {
       console.error('Initialization error:', error);
-      // Even on error, show the UI with defaults
-      set({
-        meetings: [],
-        categories: [],
-        currentView: 'weekly',
-        currentWeekType: 'A',
-        settings: { monthlyViewEnabled: true, timeFormat: '12h' as const },
-        error: null, // Don't show error, just use defaults
-        isLoading: false,
-      });
+      // On error, keep cached data if available, otherwise use defaults
+      const currentState = get();
+      const hasCachedData = currentState.meetings.length > 0 || currentState.categories.length > 0;
+      
+      if (!hasCachedData) {
+        set({
+          meetings: [],
+          categories: [],
+          currentView: 'weekly',
+          currentWeekType: 'A',
+          settings: { monthlyViewEnabled: true, timeFormat: '12h' as const },
+          error: null,
+          isLoading: false,
+        });
+      } else {
+        // Keep cached data, just mark as not loading
+        set({ error: null, isLoading: false });
+      }
     }
   },
 
@@ -359,20 +386,65 @@ export const useStore = create<AppState>()(
     {
       name: 'starfox-calendar-store', // localStorage key
       storage: createJSONStorage(() => localStorage),
+      version: 1, // Version for future migrations
       // Only persist data, not loading/error states
       partialize: (state) => ({
         meetings: state.meetings,
         categories: state.categories,
         currentView: state.currentView,
         currentWeekType: state.currentWeekType,
-        settings: state.settings,
+        settings: {
+          // Ensure all settings fields are persisted
+          monthlyViewEnabled: state.settings.monthlyViewEnabled ?? true,
+          timezone: state.settings.timezone,
+          timeFormat: state.settings.timeFormat ?? '12h',
+          oauthClientIds: state.settings.oauthClientIds,
+          defaultPublicVisibility: state.settings.defaultPublicVisibility,
+          permalinkBaseUrl: state.settings.permalinkBaseUrl,
+        },
       }),
-      // On rehydration, keep isLoading true until init completes
-      onRehydrateStorage: () => (state) => {
-        if (state) {
-          // Set isLoading to true so UI shows loading state while we refresh from storage
-          state.isLoading = true;
+      // On rehydration, cached data is immediately available
+      // Set isLoading to false initially so cached data shows immediately
+      // init() will refresh from storage in the background
+      onRehydrateStorage: () => (state, error) => {
+        if (error) {
+          console.error('Error rehydrating from cache:', error);
+          return;
         }
+        if (state) {
+          // Ensure settings have all required fields with defaults
+          if (!state.settings) {
+            state.settings = { monthlyViewEnabled: true, timeFormat: '12h' };
+          } else {
+            // Ensure required fields exist
+            if (state.settings.monthlyViewEnabled === undefined) {
+              state.settings.monthlyViewEnabled = true;
+            }
+            if (!state.settings.timeFormat) {
+              state.settings.timeFormat = '12h';
+            }
+          }
+          
+          // Cached data is now available, show it immediately
+          // init() will refresh from storage in the background
+          state.isLoading = false;
+          console.log('Rehydrated from cache:', {
+            meetings: state.meetings.length,
+            categories: state.categories.length,
+            currentView: state.currentView,
+            currentWeekType: state.currentWeekType,
+            settings: state.settings,
+          });
+        }
+      },
+      // Migrate function for future schema changes
+      migrate: (persistedState: any, version: number) => {
+        // Handle migrations between versions
+        if (version === 0) {
+          // Example: migrate from version 0 to 1
+          // Add any necessary transformations here
+        }
+        return persistedState;
       },
     }
   )
