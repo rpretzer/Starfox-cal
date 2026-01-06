@@ -499,42 +499,46 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
 
               {/* Add/Edit Team Form */}
               <div className="mb-6 p-3 sm:p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Team Name
-                    </label>
-                    <input
-                      type="text"
-                      value={newCategoryName}
-                      onChange={(e) => setNewCategoryName(e.target.value)}
-                      placeholder="Enter team name"
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Team Color
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="color"
-                        value={newCategoryColor}
-                        onChange={(e) => setNewCategoryColor(e.target.value)}
-                        className="h-10 w-20 rounded border border-gray-300 dark:border-gray-600 cursor-pointer"
-                      />
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Team Name
+                      </label>
                       <input
                         type="text"
-                        value={newCategoryColor}
-                        onChange={(e) => setNewCategoryColor(e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                        placeholder="#4287f5"
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        placeholder="Enter team name"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                       />
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Team Color
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="color"
+                          value={newCategoryColor}
+                          onChange={(e) => setNewCategoryColor(e.target.value)}
+                          className="h-10 w-16 sm:w-20 rounded border-2 border-gray-300 dark:border-gray-600 cursor-pointer flex-shrink-0"
+                          title="Pick a color"
+                        />
+                        <input
+                          type="text"
+                          value={newCategoryColor}
+                          onChange={(e) => setNewCategoryColor(e.target.value)}
+                          className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono text-sm"
+                          placeholder="#4287f5"
+                          pattern="^#[0-9A-Fa-f]{6}$"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-end">
+                  <div className="flex gap-2">
                     {editingCategory ? (
-                      <div className="flex gap-2 w-full">
+                      <>
                         <button
                           onClick={handleSaveCategory}
                           className="flex-1 bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors"
@@ -547,7 +551,7 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                         >
                           Cancel
                         </button>
-                      </div>
+                      </>
                     ) : (
                       <button
                         onClick={handleAddCategory}
@@ -562,6 +566,9 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
 
               {/* Teams List */}
               <div className="space-y-2">
+                <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                  Current Teams ({categories.length})
+                </h4>
                 {categories.length === 0 ? (
                   <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg text-center text-gray-500 dark:text-gray-400">
                     No teams yet. Add your first team above.
@@ -572,32 +579,33 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                     return (
                       <div
                         key={category.id}
-                        className="flex items-center justify-between p-4 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg"
+                        className="flex items-center justify-between p-3 sm:p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
                           <div
-                            className="w-6 h-6 rounded border border-gray-300 dark:border-gray-600"
+                            className="w-6 h-6 rounded border-2 border-gray-300 dark:border-gray-600 flex-shrink-0"
                             style={{ backgroundColor: color }}
+                            title={color}
                           />
-                          <div>
-                            <div className="font-medium text-gray-900 dark:text-gray-100">
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium text-gray-900 dark:text-gray-100 truncate">
                               {category.name}
                             </div>
-                            <div className="text-sm text-gray-500 dark:text-gray-400">
-                              ID: {category.id}
+                            <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-mono">
+                              {color}
                             </div>
                           </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-shrink-0">
                           <button
                             onClick={() => handleEditCategory(category)}
-                            className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors"
+                            className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-500 transition-colors"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleDeleteCategory(category.id)}
-                            className="px-3 py-1 text-sm bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                            className="px-3 py-1.5 text-sm bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
                           >
                             Delete
                           </button>
