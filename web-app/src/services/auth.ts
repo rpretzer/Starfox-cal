@@ -44,27 +44,45 @@ class AuthService {
   }
 
   async getCurrentUser(): Promise<AuthUser | null> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
+    try {
+      // Check if Supabase is configured
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        return null;
+      }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
 
-    // Get user profile
-    const { data: profile } = await supabase
-      .from('user_profiles')
-      .select('display_name, is_demo')
-      .eq('id', user.id)
-      .single();
+      // Get user profile
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('display_name, is_demo')
+        .eq('id', user.id)
+        .single();
 
-    return {
-      id: user.id,
-      email: user.email,
-      displayName: profile?.display_name || user.email?.split('@')[0],
-      isDemo: profile?.is_demo || false,
-    };
+      return {
+        id: user.id,
+        email: user.email,
+        displayName: profile?.display_name || user.email?.split('@')[0],
+        isDemo: profile?.is_demo || false,
+      };
+    } catch (error) {
+      console.warn('Failed to get current user:', error);
+      return null;
+    }
   }
 
   async getSession(): Promise<Session | null> {
-    const { data: { session } } = await supabase.auth.getSession();
-    return session;
+    try {
+      // Check if Supabase is configured
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        return null;
+      }
+      const { data: { session } } = await supabase.auth.getSession();
+      return session;
+    } catch (error) {
+      console.warn('Failed to get session:', error);
+      return null;
+    }
   }
 
   async signInWithGoogle(): Promise<{ error: AuthError | null }> {

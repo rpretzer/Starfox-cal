@@ -167,27 +167,33 @@ function App() {
         const currentUser = await authService.getCurrentUser();
         setUser(currentUser);
       } catch (err) {
-        console.error('Auth check failed:', err);
+        console.warn('Auth check failed (using local storage):', err);
+        // Continue without authentication - app will use IndexedDB
       } finally {
         setCheckingAuth(false);
       }
     };
     checkAuth();
 
-    // Listen for auth state changes
-    const { data: { subscription } } = authService.onAuthStateChange((user) => {
-      setUser(user);
-      if (user) {
-        // Reinitialize store when user logs in
-        init().catch((err) => {
-          console.error('Failed to initialize app:', err);
-        });
-      }
-    });
+    // Listen for auth state changes (only if Supabase is configured)
+    try {
+      const { data: { subscription } } = authService.onAuthStateChange((user) => {
+        setUser(user);
+        if (user) {
+          // Reinitialize store when user logs in
+          init().catch((err) => {
+            console.error('Failed to initialize app:', err);
+          });
+        }
+      });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+      return () => {
+        subscription.unsubscribe();
+      };
+    } catch (error) {
+      console.warn('Failed to set up auth listener (using local storage):', error);
+      return () => {}; // Return empty cleanup function
+    }
   }, [init]);
 
   // Initialize app

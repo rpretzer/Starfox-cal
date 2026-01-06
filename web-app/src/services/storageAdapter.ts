@@ -14,27 +14,56 @@ class StorageAdapter {
   private useCloud = false;
 
   async init(): Promise<void> {
-    // Check if user is authenticated
-    const session = await authService.getSession();
-    this.useCloud = !!session;
+    try {
+      // Check if user is authenticated and Supabase is configured
+      const session = await authService.getSession();
+      const hasSupabaseConfig = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
+      
+      this.useCloud = !!session && hasSupabaseConfig;
 
-    if (this.useCloud) {
-      await supabaseStorageService.init();
-    } else {
+      if (this.useCloud) {
+        try {
+          await supabaseStorageService.init();
+        } catch (error) {
+          console.warn('Failed to initialize Supabase, falling back to local storage:', error);
+          this.useCloud = false;
+          await storageService.init();
+        }
+      } else {
+        await storageService.init();
+      }
+    } catch (error) {
+      console.warn('Auth check failed, using local storage:', error);
+      this.useCloud = false;
       await storageService.init();
     }
   }
 
   async checkAuthAndSwitch(): Promise<void> {
-    const session = await authService.getSession();
-    const wasUsingCloud = this.useCloud;
-    this.useCloud = !!session;
+    try {
+      const session = await authService.getSession();
+      const hasSupabaseConfig = !!(import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY);
+      const wasUsingCloud = this.useCloud;
+      this.useCloud = !!session && hasSupabaseConfig;
 
-    // If auth state changed, reinitialize
-    if (wasUsingCloud !== this.useCloud) {
+      // If auth state changed, reinitialize
+      if (wasUsingCloud !== this.useCloud) {
+        if (this.useCloud) {
+          try {
+            await supabaseStorageService.init();
+          } catch (error) {
+            console.warn('Failed to switch to Supabase, staying on local storage:', error);
+            this.useCloud = false;
+          }
+        } else {
+          await storageService.init();
+        }
+      }
+    } catch (error) {
+      // If auth check fails, stay on local storage
+      console.warn('Auth check failed:', error);
       if (this.useCloud) {
-        await supabaseStorageService.init();
-      } else {
+        this.useCloud = false;
         await storageService.init();
       }
     }

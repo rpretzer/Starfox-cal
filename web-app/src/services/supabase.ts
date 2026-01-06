@@ -10,16 +10,11 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    'Supabase environment variables not set. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.local'
-  );
-}
-
-// Create Supabase client
+// Create Supabase client with fallback empty strings
+// The app will gracefully fall back to IndexedDB if Supabase is not configured
 export const supabase: SupabaseClient = createClient(
-  supabaseUrl || '',
-  supabaseAnonKey || '',
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder-key',
   {
     auth: {
       autoRefreshToken: true,
