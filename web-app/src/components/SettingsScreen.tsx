@@ -97,7 +97,11 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
         colorValue,
       });
       
+      // Refresh categories to ensure state is updated (persist middleware will save to localStorage)
+      await refreshCategories();
+      
       setNewCategoryName('');
+      // Get next available color after refresh (usedColors will update automatically)
       const nextColor = getNextAvailableColor([...usedColors, colorValue]);
       setNewCategoryColor(nextColor);
       showToast(`Category "${newCategoryName.trim()}" added successfully`, 'success');
@@ -135,6 +139,9 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
         colorValue,
       });
       
+      // Refresh categories to ensure state is updated (color availability will update automatically)
+      await refreshCategories();
+      
       setEditingCategory(null);
       setNewCategoryName('');
       const nextColor = getNextAvailableColor(usedColors);
@@ -152,6 +159,10 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
     try {
       const category = getCategory(id);
       await deleteCategory(id);
+      // Category deleted - color is now available again
+      // The usedColors memo will automatically update since it depends on categories
+      // Refresh categories to ensure state is updated
+      await refreshCategories();
       showToast(`Category "${category?.name || id}" deleted successfully`, 'success');
     } catch (error) {
       showToast(`Failed to delete category: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');

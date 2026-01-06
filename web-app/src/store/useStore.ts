@@ -209,11 +209,13 @@ export const useStore = create<AppState>()(
   refreshMeetings: async () => {
     const meetings = await storageAdapter.getAllMeetings();
     set({ meetings });
+    // Persist middleware will automatically save to localStorage
   },
 
   refreshCategories: async () => {
     const categories = await storageAdapter.getAllCategories();
     set({ categories });
+    // Persist middleware will automatically save to localStorage
   },
 
   setCurrentView: async (view: ViewType) => {
@@ -310,21 +312,25 @@ export const useStore = create<AppState>()(
       };
     }
     await storageAdapter.saveMeeting(meetingToSave);
+    // Refresh meetings from storage and update state (persist middleware will save to localStorage)
     await get().refreshMeetings();
   },
 
   deleteMeeting: async (id: number) => {
     await storageAdapter.deleteMeeting(id);
+    // Refresh meetings from storage and update state (persist middleware will save to localStorage)
     await get().refreshMeetings();
   },
 
   saveCategory: async (category: Category) => {
     await storageAdapter.saveCategory(category);
+    // Refresh categories from storage and update state (persist middleware will save to localStorage)
     await get().refreshCategories();
   },
 
   deleteCategory: async (id: string) => {
     await storageAdapter.deleteCategory(id);
+    // Refresh categories from storage and update state (persist middleware will save to localStorage)
     await get().refreshCategories();
   },
 
