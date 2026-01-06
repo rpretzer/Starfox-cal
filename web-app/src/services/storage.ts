@@ -204,6 +204,18 @@ class StorageService {
       await this.saveMeeting(updatedMeeting);
     }
   }
+
+  // Settings
+  async getSettings(): Promise<{ monthlyViewEnabled: boolean }> {
+    if (!this.db) return { monthlyViewEnabled: false };
+    const enabled = await this.db.get('settings', 'monthlyViewEnabled');
+    return { monthlyViewEnabled: enabled === 'true' || enabled === true };
+  }
+
+  async setMonthlyViewEnabled(enabled: boolean): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    await this.db.put('settings', enabled, 'monthlyViewEnabled');
+  }
 }
 
 export const storageService = new StorageService();

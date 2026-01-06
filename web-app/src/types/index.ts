@@ -25,6 +25,10 @@ export interface Category {
   colorValue: number; // Hex color as number
 }
 
-export type ViewType = 'weekly' | 'conflicts' | 'categories';
+export type ViewType = 'weekly' | 'conflicts' | 'categories' | 'monthly';
 export type WeekTypeFilter = 'A' | 'B';
+
+export interface AppSettings {
+  monthlyViewEnabled: boolean;
+}
 

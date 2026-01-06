@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Meeting, Category, ViewType, WeekTypeFilter } from '../types';
+import { Meeting, Category, ViewType, WeekTypeFilter, AppSettings } from '../types';
 import { storageService } from '../services/storage';
 
 interface AppState {
@@ -7,6 +7,7 @@ interface AppState {
   categories: Category[];
   currentView: ViewType;
   currentWeekType: WeekTypeFilter;
+  settings: AppSettings;
   isLoading: boolean;
   error: string | null;
   
@@ -16,6 +17,7 @@ interface AppState {
   refreshCategories: () => Promise<void>;
   setCurrentView: (view: ViewType) => Promise<void>;
   setCurrentWeekType: (weekType: WeekTypeFilter) => Promise<void>;
+  setMonthlyViewEnabled: (enabled: boolean) => Promise<void>;
   saveMeeting: (meeting: Meeting) => Promise<void>;
   deleteMeeting: (id: number) => Promise<void>;
   saveCategory: (category: Category) => Promise<void>;
@@ -33,6 +35,7 @@ export const useStore = create<AppState>((set, get) => ({
   categories: [],
   currentView: 'weekly',
   currentWeekType: 'A',
+  settings: { monthlyViewEnabled: false },
   isLoading: true,
   error: null,
 
@@ -45,12 +48,14 @@ export const useStore = create<AppState>((set, get) => ({
       const categories = await storageService.getAllCategories();
       const currentView = storageService.getCurrentView();
       const currentWeekType = storageService.getCurrentWeekType();
+      const settings = await storageService.getSettings();
       
       set({
         meetings,
         categories,
         currentView,
         currentWeekType,
+        settings,
         isLoading: false,
       });
     } catch (error) {
@@ -80,6 +85,13 @@ export const useStore = create<AppState>((set, get) => ({
   setCurrentWeekType: async (weekType: WeekTypeFilter) => {
     await storageService.setCurrentWeekType(weekType);
     set({ currentWeekType: weekType });
+  },
+
+  setMonthlyViewEnabled: async (enabled: boolean) => {
+    await storageService.setMonthlyViewEnabled(enabled);
+    set((state) => ({
+      settings: { ...state.settings, monthlyViewEnabled: enabled },
+    }));
   },
 
   saveMeeting: async (meeting: Meeting) => {
