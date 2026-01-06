@@ -4,7 +4,7 @@ import { ViewType, WeekTypeFilter } from '../types';
 export default function CalendarHeader() {
   const { currentView, currentWeekType, settings, setCurrentView, setCurrentWeekType } = useStore();
 
-  const availableViews: ViewType[] = ['weekly', 'conflicts', 'categories'];
+  const availableViews: ViewType[] = ['weekly', 'conflicts', 'categories', 'teams'];
   if (settings.monthlyViewEnabled) {
     availableViews.push('monthly');
   }
