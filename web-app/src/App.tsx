@@ -3,7 +3,7 @@ import { useStore } from './store/useStore';
 import CalendarScreen from './components/CalendarScreen';
 import LoadingScreen from './components/LoadingScreen';
 import ErrorScreen from './components/ErrorScreen';
-import AuthScreen from './components/AuthScreen';
+// import AuthScreen from './components/AuthScreen'; // Uncomment when requiring authentication
 import ToastContainer, { useToast } from './components/ToastContainer';
 import { setGlobalToast } from './hooks/useGlobalToast';
 import { exchangeGoogleCode, exchangeOutlookCode } from './services/calendarSync';
