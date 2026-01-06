@@ -2,7 +2,12 @@ import { useStore } from '../store/useStore';
 import { ViewType, WeekTypeFilter } from '../types';
 
 export default function CalendarHeader() {
-  const { currentView, currentWeekType, setCurrentView, setCurrentWeekType } = useStore();
+  const { currentView, currentWeekType, settings, setCurrentView, setCurrentWeekType } = useStore();
+
+  const availableViews: ViewType[] = ['weekly', 'conflicts', 'categories'];
+  if (settings.monthlyViewEnabled) {
+    availableViews.push('monthly');
+  }
 
   return (
     <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
@@ -11,7 +16,7 @@ export default function CalendarHeader() {
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">View:</span>
             <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-              {(['weekly', 'conflicts', 'categories'] as ViewType[]).map((view) => (
+              {availableViews.map((view) => (
                 <button
                   key={view}
                   onClick={() => setCurrentView(view)}
