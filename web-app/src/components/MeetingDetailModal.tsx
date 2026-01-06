@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { Meeting, WeekType } from '../types';
 import { DAYS_OF_WEEK } from '../constants';
+import { timeToInputFormat, inputFormatToTime } from '../utils/timeUtils';
 
 interface MeetingDetailModalProps {
   meeting: Meeting;
@@ -9,19 +10,29 @@ interface MeetingDetailModalProps {
 }
 
 export default function MeetingDetailModal({ meeting, onClose }: MeetingDetailModalProps) {
-  const { saveMeeting, deleteMeeting, categories } = useStore();
+  const { saveMeeting, deleteMeeting, categories, settings } = useStore();
   const [formData, setFormData] = useState(meeting);
   const [isSaving, setIsSaving] = useState(false);
+  const [startTimeInput, setStartTimeInput] = useState(timeToInputFormat(meeting.startTime));
+  const [endTimeInput, setEndTimeInput] = useState(timeToInputFormat(meeting.endTime));
 
   useEffect(() => {
     setFormData(meeting);
+    setStartTimeInput(timeToInputFormat(meeting.startTime));
+    setEndTimeInput(timeToInputFormat(meeting.endTime));
   }, [meeting]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     try {
-      await saveMeeting(formData);
+      // Convert time inputs to display format
+      const meetingToSave = {
+        ...formData,
+        startTime: inputFormatToTime(startTimeInput, settings.timeFormat),
+        endTime: inputFormatToTime(endTimeInput, settings.timeFormat),
+      };
+      await saveMeeting(meetingToSave);
       onClose();
     } catch (error) {
       console.error('Error saving meeting:', error);
@@ -130,11 +141,16 @@ export default function MeetingDetailModal({ meeting, onClose }: MeetingDetailMo
                   Start Time *
                 </label>
                 <input
-                  type="text"
+                  type="time"
                   required
-                  value={formData.startTime}
-                  onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                  placeholder="10:00 AM"
+                  value={startTimeInput}
+                  onChange={(e) => {
+                    setStartTimeInput(e.target.value);
+                    setFormData({
+                      ...formData,
+                      startTime: inputFormatToTime(e.target.value, settings.timeFormat),
+                    });
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>
@@ -143,11 +159,16 @@ export default function MeetingDetailModal({ meeting, onClose }: MeetingDetailMo
                   End Time *
                 </label>
                 <input
-                  type="text"
+                  type="time"
                   required
-                  value={formData.endTime}
-                  onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                  placeholder="11:00 AM"
+                  value={endTimeInput}
+                  onChange={(e) => {
+                    setEndTimeInput(e.target.value);
+                    setFormData({
+                      ...formData,
+                      endTime: inputFormatToTime(e.target.value, settings.timeFormat),
+                    });
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 />
               </div>

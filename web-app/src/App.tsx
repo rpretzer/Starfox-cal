@@ -10,7 +10,7 @@ function App() {
   const [oauthProcessing, setOauthProcessing] = useState(false);
 
   useEffect(() => {
-    // Handle OAuth callback
+    // Handle OAuth callback - only run once on mount if there's a code
     const urlParams = new URLSearchParams(window.location.search);
     const code = urlParams.get('code');
     const errorParam = urlParams.get('error');
@@ -99,7 +99,8 @@ function App() {
 
       handleOAuthCallback();
     }
-  }, [saveSyncConfig]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount - don't depend on saveSyncConfig
 
   useEffect(() => {
     init().catch((err) => {

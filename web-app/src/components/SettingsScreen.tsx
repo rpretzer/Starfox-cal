@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { Category, MeetingSeries, WeekType, CalendarSyncConfig, CalendarProvider } from '../types';
 import { syncCalendar, getGoogleAuthUrl, getOutlookAuthUrl } from '../services/calendarSync';
-import { getAvailableTimezones, getTimezoneDisplayName, getCurrentTimezone } from '../utils/timeUtils';
+import { getAvailableTimezones, getTimezoneDisplayName, getCurrentTimezone, timeToInputFormat, inputFormatToTime } from '../utils/timeUtils';
 
 interface SettingsScreenProps {
   onClose: () => void;
@@ -34,6 +34,8 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
   const [meetingSeries, setMeetingSeries] = useState<MeetingSeries[]>([]);
   const [editingSeries, setEditingSeries] = useState<MeetingSeries | null>(null);
   const [seriesFormData, setSeriesFormData] = useState<Partial<MeetingSeries>>({});
+  const [seriesStartTimeInput, setSeriesStartTimeInput] = useState('');
+  const [seriesEndTimeInput, setSeriesEndTimeInput] = useState('');
   const [syncConfigs, setSyncConfigs] = useState<CalendarSyncConfig[]>([]);
   const [showSyncForm, setShowSyncForm] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<CalendarProvider | null>(null);
@@ -112,13 +114,22 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
       notes: series.notes,
       assignedTo: series.assignedTo,
     });
+    setSeriesStartTimeInput(timeToInputFormat(series.startTime));
+    setSeriesEndTimeInput(timeToInputFormat(series.endTime));
   };
 
   const handleSaveSeries = async () => {
     if (!editingSeries) return;
-    await updateMeetingSeries(editingSeries.seriesId, seriesFormData);
+    const updates = {
+      ...seriesFormData,
+      startTime: inputFormatToTime(seriesStartTimeInput, settings.timeFormat),
+      endTime: inputFormatToTime(seriesEndTimeInput, settings.timeFormat),
+    };
+    await updateMeetingSeries(editingSeries.seriesId, updates);
     setEditingSeries(null);
     setSeriesFormData({});
+    setSeriesStartTimeInput('');
+    setSeriesEndTimeInput('');
     // Reload series
     const series = await getMeetingSeries();
     setMeetingSeries(series);
@@ -454,10 +465,15 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                                   End Time
                                 </label>
                                 <input
-                                  type="text"
-                                  value={seriesFormData.endTime || ''}
-                                  onChange={(e) => setSeriesFormData({ ...seriesFormData, endTime: e.target.value })}
-                                  placeholder="11:00 AM"
+                                  type="time"
+                                  value={seriesEndTimeInput}
+                                  onChange={(e) => {
+                                    setSeriesEndTimeInput(e.target.value);
+                                    setSeriesFormData({
+                                      ...seriesFormData,
+                                      endTime: inputFormatToTime(e.target.value, settings.timeFormat),
+                                    });
+                                  }}
                                   className="w-full px-2 sm:px-3 py-1.5 sm:py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                                 />
                               </div>

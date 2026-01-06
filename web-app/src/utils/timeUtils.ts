@@ -170,3 +170,39 @@ export function getCurrentTimezone(override?: string): string {
   return override || Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
+// Convert time string to HTML time input format (HH:MM)
+export function timeToInputFormat(timeStr: string): string {
+  const timeMatch = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+  if (!timeMatch) return '';
+
+  let hours = parseInt(timeMatch[1], 10);
+  const minutes = timeMatch[2];
+  const period = timeMatch[3]?.toUpperCase();
+
+  // Convert to 24-hour if needed
+  if (period) {
+    if (period === 'PM' && hours !== 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+  }
+
+  return `${hours.toString().padStart(2, '0')}:${minutes}`;
+}
+
+// Convert HTML time input format (HH:MM) to display format
+export function inputFormatToTime(inputTime: string, format: '12h' | '24h' = '12h'): string {
+  if (!inputTime) return '';
+  
+  const [hoursStr, minutesStr] = inputTime.split(':');
+  const hours = parseInt(hoursStr, 10);
+  const minutes = minutesStr || '00';
+
+  if (format === '24h') {
+    return `${hours.toString().padStart(2, '0')}:${minutes}`;
+  } else {
+    // 12-hour format
+    const hour12 = hours % 12 || 12;
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    return `${hour12}:${minutes} ${ampm}`;
+  }
+}
+
