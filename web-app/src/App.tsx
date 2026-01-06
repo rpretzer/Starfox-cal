@@ -6,12 +6,11 @@ import LoadingScreen from './components/LoadingScreen';
 import ToastContainer, { useToast } from './components/ToastContainer';
 import { setGlobalToast } from './hooks/useGlobalToast';
 import { exchangeGoogleCode, exchangeOutlookCode } from './services/calendarSync';
-import { authService, AuthUser } from './services/auth';
+import { authService } from './services/auth';
 
 function App() {
   const { init, isLoading, saveSyncConfig } = useStore();
   const [oauthProcessing, setOauthProcessing] = useState(false);
-  const [user, setUser] = useState<AuthUser | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const { toasts, showToast, removeToast } = useToast();
 
@@ -172,10 +171,8 @@ function App() {
           new Promise<null>((resolve) => setTimeout(() => resolve(null), 1000)), // 1 second timeout
         ]);
         
-        const currentUser = await authCheck;
-        if (mounted) {
-          setUser(currentUser);
-        }
+        // Auth check - user state is handled by auth service
+        await authCheck;
       } catch (err) {
         console.warn('Auth check failed (using local storage):', err);
         // Continue without authentication - app will use IndexedDB
@@ -193,14 +190,11 @@ function App() {
     (async () => {
       try {
         const authStateChange = await authService.onAuthStateChange((user) => {
-          if (mounted) {
-            setUser(user);
-            if (user) {
-              // Reinitialize store when user logs in
-              init().catch((err) => {
-                console.error('Failed to initialize app:', err);
-              });
-            }
+          if (mounted && user) {
+            // Reinitialize store when user logs in
+            init().catch((err) => {
+              console.error('Failed to initialize app:', err);
+            });
           }
         });
         
@@ -218,14 +212,14 @@ function App() {
     };
   }, [init]);
 
-  // Initialize app
+  // Initialize app - load cached data immediately, then refresh from storage
   useEffect(() => {
-    if (user) {
-      init().catch((err) => {
-        console.error('Failed to initialize app:', err);
-      });
-    }
-  }, [user, init]);
+    // Always try to init, even if user is null (for local storage)
+    // Cached data from localStorage will show immediately via persistence middleware
+    init().catch((err) => {
+      console.error('Failed to initialize app:', err);
+    });
+  }, [init]);
 
   // Handle OAuth callback from Supabase
   useEffect(() => {
@@ -243,19 +237,25 @@ function App() {
     handleSupabaseCallback();
   }, []);
 
-  // Show loading screen with timeout - if it takes too long, show UI anyway
+  // Show loading screen only briefly - cached data will show immediately
   const [showLoading, setShowLoading] = useState(true);
   
   useEffect(() => {
-    // Force show UI after 3 seconds even if still loading
+    // Show UI quickly - cached data from localStorage will be visible immediately
+    // Only show loading if we don't have cached data and are still initializing
     const timer = setTimeout(() => {
       setShowLoading(false);
-    }, 3000);
+    }, 500); // Reduced from 3 seconds to 500ms - cached data loads instantly
     
     return () => clearTimeout(timer);
   }, []);
 
-  if ((checkingAuth || isLoading || oauthProcessing) && showLoading) {
+  // Only show loading screen if we're checking auth AND don't have cached data
+  // If we have cached data (from persistence), show UI immediately
+  const { meetings, categories } = useStore();
+  const hasCachedData = meetings.length > 0 || categories.length > 0;
+  
+  if ((checkingAuth || (isLoading && !hasCachedData) || oauthProcessing) && showLoading) {
     return <LoadingScreen />;
   }
 

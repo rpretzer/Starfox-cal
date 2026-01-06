@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { Meeting, Category, ViewType, WeekTypeFilter, AppSettings, MeetingSeries, CalendarSyncConfig } from '../types';
 import { storageAdapter } from '../services/storageAdapter';
 
@@ -42,18 +43,22 @@ interface AppState {
   deleteSyncConfig: (id: string) => Promise<void>;
 }
 
-export const useStore = create<AppState>((set, get) => ({
-  meetings: [],
-  categories: [],
-  currentView: 'weekly',
-  currentWeekType: 'A',
-  settings: { monthlyViewEnabled: false, timeFormat: '12h' },
-  isLoading: true,
-  error: null,
+export const useStore = create<AppState>()(
+  persist(
+    (set, get) => ({
+      meetings: [],
+      categories: [],
+      currentView: 'weekly',
+      currentWeekType: 'A',
+      settings: { monthlyViewEnabled: false, timeFormat: '12h' },
+      isLoading: true,
+      error: null,
 
   init: async () => {
     try {
-      set({ isLoading: true, error: null });
+      // Don't reset isLoading here - it may have been set by persistence rehydration
+      // Just ensure error is null
+      set({ error: null });
       
       // Add timeout to prevent infinite hanging - reduced to 5 seconds
       const initPromise = storageAdapter.init();
@@ -350,5 +355,26 @@ export const useStore = create<AppState>((set, get) => ({
   deleteSyncConfig: async (id: string) => {
     await storageAdapter.deleteSyncConfig(id);
   },
-}));
+    }),
+    {
+      name: 'starfox-calendar-store', // localStorage key
+      storage: createJSONStorage(() => localStorage),
+      // Only persist data, not loading/error states
+      partialize: (state) => ({
+        meetings: state.meetings,
+        categories: state.categories,
+        currentView: state.currentView,
+        currentWeekType: state.currentWeekType,
+        settings: state.settings,
+      }),
+      // On rehydration, keep isLoading true until init completes
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          // Set isLoading to true so UI shows loading state while we refresh from storage
+          state.isLoading = true;
+        }
+      },
+    }
+  )
+);
 
