@@ -3,6 +3,7 @@ import { DAYS_OF_WEEK } from '../constants';
 import { useStore } from '../store/useStore';
 import MeetingCard from './MeetingCard';
 import { Meeting } from '../types';
+import { useGlobalToast } from '../hooks/useGlobalToast';
 
 interface TeamCalendarProps {
   categoryId: string;
@@ -11,7 +12,8 @@ interface TeamCalendarProps {
 
 // Team-specific DayColumn that filters by category
 function TeamDayColumn({ day, categoryId, onMeetingClick }: { day: string; categoryId: string; onMeetingClick: (meeting: Meeting) => void }) {
-  const { getMeetingsForDay, currentWeekType, moveMeetingToDay, meetings } = useStore();
+  const { getMeetingsForDay, currentWeekType, moveMeetingToDay, meetings, getMeeting } = useStore();
+  const { showToast } = useGlobalToast();
   const [dayMeetings, setDayMeetings] = useState<Meeting[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -113,9 +115,18 @@ function TeamDayColumn({ day, categoryId, onMeetingClick }: { day: string; categ
       setDayMeetings(newMeetings);
       setDragOverIndex(null);
       setDraggedMeetingId(null);
+      // Toast for reordering (optional, can be silent)
     } else {
       // Moving to a different day
-      await moveMeetingToDay(meetingId, day);
+      try {
+        const meeting = getMeeting(meetingId);
+        await moveMeetingToDay(meetingId, day);
+        if (meeting) {
+          showToast(`Meeting "${meeting.name}" moved to ${day}`, 'success');
+        }
+      } catch (error) {
+        showToast(`Failed to move meeting: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+      }
     }
   };
 

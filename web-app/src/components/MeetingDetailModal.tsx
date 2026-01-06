@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore';
 import { Meeting, WeekType } from '../types';
 import { DAYS_OF_WEEK } from '../constants';
 import { timeToInputFormat, inputFormatToTime } from '../utils/timeUtils';
+import { useGlobalToast } from '../hooks/useGlobalToast';
 
 interface MeetingDetailModalProps {
   meeting: Meeting;
@@ -11,6 +12,7 @@ interface MeetingDetailModalProps {
 
 export default function MeetingDetailModal({ meeting, onClose }: MeetingDetailModalProps) {
   const { saveMeeting, deleteMeeting, categories, settings } = useStore();
+  const { showToast } = useGlobalToast();
   const [formData, setFormData] = useState(meeting);
   const [isSaving, setIsSaving] = useState(false);
   const [startTimeInput, setStartTimeInput] = useState(timeToInputFormat(meeting.startTime));
@@ -33,10 +35,12 @@ export default function MeetingDetailModal({ meeting, onClose }: MeetingDetailMo
         endTime: inputFormatToTime(endTimeInput, settings.timeFormat),
       };
       await saveMeeting(meetingToSave);
+      const action = meeting.id > 0 ? 'updated' : 'created';
+      showToast(`Meeting "${meetingToSave.name}" ${action} successfully`, 'success');
       onClose();
     } catch (error) {
       console.error('Error saving meeting:', error);
-      alert('Failed to save meeting');
+      showToast(`Failed to save meeting: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
     } finally {
       setIsSaving(false);
     }
@@ -46,11 +50,13 @@ export default function MeetingDetailModal({ meeting, onClose }: MeetingDetailMo
     if (!confirm('Are you sure you want to delete this meeting?')) return;
     
     try {
+      const meetingName = meeting.name;
       await deleteMeeting(meeting.id);
+      showToast(`Meeting "${meetingName}" deleted successfully`, 'success');
       onClose();
     } catch (error) {
       console.error('Error deleting meeting:', error);
-      alert('Failed to delete meeting');
+      showToast(`Failed to delete meeting: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
     }
   };
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import { Meeting } from '../types';
 import { formatTime } from '../utils/timeUtils';
+import { useGlobalToast } from '../hooks/useGlobalToast';
 
 interface MeetingCardProps {
   meeting: Meeting;
@@ -12,6 +13,7 @@ interface MeetingCardProps {
 
 export default function MeetingCard({ meeting, onClick, onDragStart, onDragEnd }: MeetingCardProps) {
   const { getCategory, deleteMeeting, settings } = useStore();
+  const { showToast } = useGlobalToast();
   const category = getCategory(meeting.categoryId);
   const color = category ? `#${category.colorValue.toString(16).padStart(6, '0')}` : '#6c757d';
   const [isDragging, setIsDragging] = useState(false);
@@ -40,7 +42,13 @@ export default function MeetingCard({ meeting, onClick, onDragStart, onDragEnd }
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering onClick
     if (confirm(`Are you sure you want to delete "${meeting.name}"?`)) {
-      await deleteMeeting(meeting.id);
+      try {
+        const meetingName = meeting.name;
+        await deleteMeeting(meeting.id);
+        showToast(`Meeting "${meetingName}" deleted successfully`, 'success');
+      } catch (error) {
+        showToast(`Failed to delete meeting: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+      }
     }
   };
 

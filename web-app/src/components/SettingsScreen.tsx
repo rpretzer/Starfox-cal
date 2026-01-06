@@ -174,10 +174,17 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
       return;
     }
     
-    await deleteMeetingSeries(seriesId);
-    // Reload series
-    const updatedSeries = await getMeetingSeries();
-    setMeetingSeries(updatedSeries);
+    try {
+      const seriesName = series.name;
+      const meetingCount = series.meetingIds.length;
+      await deleteMeetingSeries(seriesId);
+      // Reload series
+      const updatedSeries = await getMeetingSeries();
+      setMeetingSeries(updatedSeries);
+      showToast(`Meeting series "${seriesName}" deleted (${meetingCount} meeting(s) removed)`, 'success');
+    } catch (error) {
+      showToast(`Failed to delete meeting series: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+    }
   };
 
   const handleCancelSeriesEdit = () => {
@@ -781,21 +788,26 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                               <button
                                 onClick={async () => {
                                   setSyncing(`${config.provider}-${config.name}`);
-                                  const result = await syncCalendar(config);
-                                  if (result.success) {
-                                    // Import meetings
-                                    for (const meeting of result.meetings) {
-                                      const newId = await getNextMeetingId();
-                                      await saveMeeting({ ...meeting, id: newId });
+                                  try {
+                                    const result = await syncCalendar(config);
+                                    if (result.success) {
+                                      // Import meetings
+                                      for (const meeting of result.meetings) {
+                                        const newId = await getNextMeetingId();
+                                        await saveMeeting({ ...meeting, id: newId });
+                                      }
+                                      showToast(`Synced ${result.meetings.length} meeting(s) from "${config.name}"`, 'success');
+                                      // Reload configs
+                                      const configs = await getSyncConfigs();
+                                      setSyncConfigs(configs);
+                                    } else {
+                                      showToast(`Sync failed: ${result.error || 'Unknown error'}`, 'error');
                                     }
-                                    alert(`Synced ${result.meetings.length} meetings`);
-                                    // Reload configs
-                                    const configs = await getSyncConfigs();
-                                    setSyncConfigs(configs);
-                                  } else {
-                                    alert(`Sync failed: ${result.error}`);
+                                  } catch (error) {
+                                    showToast(`Sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+                                  } finally {
+                                    setSyncing(null);
                                   }
-                                  setSyncing(null);
                                 }}
                                 disabled={syncing !== null || !config.enabled}
                                 className="px-3 py-1 text-xs sm:text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors disabled:opacity-50"
@@ -804,10 +816,19 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                               </button>
                               <button
                                 onClick={async () => {
-                                  const configId = `${config.provider}-${config.name}`;
-                                  await deleteSyncConfig(configId);
-                                  const configs = await getSyncConfigs();
-                                  setSyncConfigs(configs);
+                                  if (!confirm(`Are you sure you want to delete the calendar sync "${config.name}"?`)) {
+                                    return;
+                                  }
+                                  try {
+                                    const configName = config.name;
+                                    const configId = `${config.provider}-${config.name}`;
+                                    await deleteSyncConfig(configId);
+                                    const configs = await getSyncConfigs();
+                                    setSyncConfigs(configs);
+                                    showToast(`Calendar sync "${configName}" deleted successfully`, 'success');
+                                  } catch (error) {
+                                    showToast(`Failed to delete calendar sync: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+                                  }
                                 }}
                                 className="px-3 py-1 text-xs sm:text-sm bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
                               >

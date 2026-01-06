@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import MeetingCard from './MeetingCard';
 import { Meeting } from '../types';
+import { useGlobalToast } from '../hooks/useGlobalToast';
 
 interface DayColumnProps {
   day: string;
@@ -9,7 +10,8 @@ interface DayColumnProps {
 }
 
 export default function DayColumn({ day, onMeetingClick }: DayColumnProps) {
-  const { getMeetingsForDay, currentWeekType, moveMeetingToDay, meetings } = useStore();
+  const { getMeetingsForDay, currentWeekType, moveMeetingToDay, meetings, getMeeting } = useStore();
+  const { showToast } = useGlobalToast();
   const [dayMeetings, setDayMeetings] = useState<Meeting[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -109,9 +111,18 @@ export default function DayColumn({ day, onMeetingClick }: DayColumnProps) {
       setDayMeetings(newMeetings);
       setDragOverIndex(null);
       setDraggedMeetingId(null);
+      // Toast for reordering (optional, can be silent)
     } else {
       // Moving to a different day
-      await moveMeetingToDay(meetingId, day);
+      try {
+        const meeting = getMeeting(meetingId);
+        await moveMeetingToDay(meetingId, day);
+        if (meeting) {
+          showToast(`Meeting "${meeting.name}" moved to ${day}`, 'success');
+        }
+      } catch (error) {
+        showToast(`Failed to move meeting: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+      }
     }
   };
 
