@@ -25,11 +25,11 @@ export default function DayColumn({ day, onMeetingClick }: DayColumnProps) {
   }, [day, currentWeekType]); // Removed getMeetingsForDay from deps - Zustand functions are stable
 
   return (
-    <div className="flex-shrink-0 w-64 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-      <h3 className="font-semibold text-gray-800 mb-4 text-center sticky top-0 bg-white py-2">
+    <div className="w-full bg-white rounded-lg shadow-sm border border-gray-200 p-4 flex flex-col min-h-0">
+      <h3 className="font-semibold text-gray-800 mb-4 text-center">
         {day}
       </h3>
-      <div className="space-y-2">
+      <div className="space-y-2 flex-1 overflow-y-auto">
         {meetings.length === 0 ? (
           <p className="text-gray-400 text-sm text-center py-8">No meetings</p>
         ) : (
