@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Meeting, Category, ViewType, WeekTypeFilter, AppSettings } from '../types';
+import { Meeting, Category, ViewType, WeekTypeFilter, AppSettings, MeetingSeries, CalendarSyncConfig } from '../types';
 import { storageService } from '../services/storage';
 
 interface AppState {
@@ -18,6 +18,8 @@ interface AppState {
   setCurrentView: (view: ViewType) => Promise<void>;
   setCurrentWeekType: (weekType: WeekTypeFilter) => Promise<void>;
   setMonthlyViewEnabled: (enabled: boolean) => Promise<void>;
+  setTimezone: (timezone: string | undefined) => Promise<void>;
+  setTimeFormat: (format: '12h' | '24h') => Promise<void>;
   saveMeeting: (meeting: Meeting) => Promise<void>;
   deleteMeeting: (id: number) => Promise<void>;
   saveCategory: (category: Category) => Promise<void>;
@@ -28,6 +30,13 @@ interface AppState {
   getCategory: (id: string) => Category | undefined;
   getMeeting: (id: number) => Meeting | undefined;
   getNextMeetingId: () => Promise<number>;
+  getMeetingSeries: () => Promise<MeetingSeries[]>;
+  getMeetingsInSeries: (seriesId: string) => Promise<Meeting[]>;
+  updateMeetingSeries: (seriesId: string, updates: Partial<MeetingSeries>) => Promise<void>;
+  deleteMeetingSeries: (seriesId: string) => Promise<void>;
+  getSyncConfigs: () => Promise<CalendarSyncConfig[]>;
+  saveSyncConfig: (config: CalendarSyncConfig & { id: string }) => Promise<void>;
+  deleteSyncConfig: (id: string) => Promise<void>;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -35,7 +44,7 @@ export const useStore = create<AppState>((set, get) => ({
   categories: [],
   currentView: 'weekly',
   currentWeekType: 'A',
-  settings: { monthlyViewEnabled: false },
+  settings: { monthlyViewEnabled: false, timeFormat: '12h' },
   isLoading: true,
   error: null,
 
@@ -94,6 +103,20 @@ export const useStore = create<AppState>((set, get) => ({
     }));
   },
 
+  setTimezone: async (timezone: string | undefined) => {
+    await storageService.setTimezone(timezone);
+    set((state) => ({
+      settings: { ...state.settings, timezone },
+    }));
+  },
+
+  setTimeFormat: async (format: '12h' | '24h') => {
+    await storageService.setTimeFormat(format);
+    set((state) => ({
+      settings: { ...state.settings, timeFormat: format },
+    }));
+  },
+
   saveMeeting: async (meeting: Meeting) => {
     await storageService.saveMeeting(meeting);
     await get().refreshMeetings();
@@ -137,6 +160,36 @@ export const useStore = create<AppState>((set, get) => ({
 
   getNextMeetingId: async () => {
     return storageService.getNextMeetingId();
+  },
+
+  getMeetingSeries: async () => {
+    return storageService.getMeetingSeries();
+  },
+
+  getMeetingsInSeries: async (seriesId: string) => {
+    return storageService.getMeetingsInSeries(seriesId);
+  },
+
+  updateMeetingSeries: async (seriesId: string, updates: Partial<MeetingSeries>) => {
+    await storageService.updateMeetingSeries(seriesId, updates);
+    await get().refreshMeetings();
+  },
+
+  deleteMeetingSeries: async (seriesId: string) => {
+    await storageService.deleteMeetingSeries(seriesId);
+    await get().refreshMeetings();
+  },
+
+  getSyncConfigs: async () => {
+    return storageService.getSyncConfigs();
+  },
+
+  saveSyncConfig: async (config: CalendarSyncConfig & { id: string }) => {
+    await storageService.saveSyncConfig(config);
+  },
+
+  deleteSyncConfig: async (id: string) => {
+    await storageService.deleteSyncConfig(id);
   },
 }));
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import MeetingCard from './MeetingCard';
 import { Meeting } from '../types';
@@ -12,13 +12,22 @@ export default function DayColumn({ day, onMeetingClick }: DayColumnProps) {
   const { getMeetingsForDay, currentWeekType, moveMeetingToDay, meetings } = useStore();
   const [dayMeetings, setDayMeetings] = useState<Meeting[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [draggedMeetingId, setDraggedMeetingId] = useState<number | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
     const loadMeetings = async () => {
       const result = await getMeetingsForDay(day);
       if (!cancelled) {
-        setDayMeetings(result);
+        // Sort by start time as default order
+        const sorted = [...result].sort((a, b) => {
+          const timeA = a.startTime.toLowerCase();
+          const timeB = b.startTime.toLowerCase();
+          return timeA.localeCompare(timeB);
+        });
+        setDayMeetings(sorted);
       }
     };
     loadMeetings();
@@ -31,33 +40,93 @@ export default function DayColumn({ day, onMeetingClick }: DayColumnProps) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     setIsDragOver(true);
+    
+    // Calculate which position the meeting is being dragged over
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      const meetingElements = containerRef.current.querySelectorAll('[data-meeting-id]');
+      
+      let index = 0;
+      for (let i = 0; i < meetingElements.length; i++) {
+        const element = meetingElements[i] as HTMLElement;
+        const elementRect = element.getBoundingClientRect();
+        const elementTop = elementRect.top - rect.top;
+        const elementBottom = elementRect.bottom - rect.top;
+        
+        if (y >= elementTop && y <= elementBottom) {
+          // Check if we're in the upper or lower half
+          const midPoint = (elementTop + elementBottom) / 2;
+          index = y < midPoint ? i : i + 1;
+          break;
+        } else if (y < elementTop) {
+          index = i;
+          break;
+        } else {
+          index = i + 1;
+        }
+      }
+      
+      setDragOverIndex(index);
+    }
   };
 
   const handleDragLeave = () => {
     setIsDragOver(false);
+    setDragOverIndex(null);
   };
 
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
     
-    const meetingId = parseInt(e.dataTransfer.getData('text/plain'), 10);
+    const meetingIdStr = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('meetingId');
+    const meetingId = parseInt(meetingIdStr, 10);
     if (isNaN(meetingId)) return;
 
-    // Check if meeting is already on this day
-    const meeting = dayMeetings.find(m => m.id === meetingId);
-    if (meeting && meeting.days.includes(day)) {
-      return; // Already on this day
-    }
+    const draggedMeeting = dayMeetings.find(m => m.id === meetingId);
+    const isSameColumn = draggedMeeting !== undefined;
 
-    // Move the meeting to this day
-    // This will trigger refreshMeetings() which updates the meetings array
-    // The useEffect will then refresh this column's meetings
-    await moveMeetingToDay(meetingId, day);
+    if (isSameColumn) {
+      // Reordering within the same column
+      const currentIndex = dayMeetings.findIndex(m => m.id === meetingId);
+      if (currentIndex === -1) return;
+
+      const targetIndex = dragOverIndex !== null ? dragOverIndex : currentIndex;
+      
+      // Don't do anything if dropped in the same position
+      if (currentIndex === targetIndex) {
+        setDragOverIndex(null);
+        setDraggedMeetingId(null);
+        return;
+      }
+
+      // Reorder the meetings array
+      const newMeetings = [...dayMeetings];
+      const [removed] = newMeetings.splice(currentIndex, 1);
+      newMeetings.splice(targetIndex, 0, removed);
+      
+      setDayMeetings(newMeetings);
+      setDragOverIndex(null);
+      setDraggedMeetingId(null);
+    } else {
+      // Moving to a different day
+      await moveMeetingToDay(meetingId, day);
+    }
+  };
+
+  const handleDragStart = (meetingId: number) => {
+    setDraggedMeetingId(meetingId);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedMeetingId(null);
+    setDragOverIndex(null);
   };
 
   return (
     <div
+      ref={containerRef}
       className={`w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border-2 p-2 sm:p-3 lg:p-4 flex flex-col min-h-0 transition-colors ${
         isDragOver
           ? 'border-primary bg-blue-50 dark:bg-blue-900/20 border-dashed'
@@ -76,12 +145,23 @@ export default function DayColumn({ day, onMeetingClick }: DayColumnProps) {
             {isDragOver ? 'Drop meeting here' : 'No meetings'}
           </p>
         ) : (
-          dayMeetings.map((meeting) => (
-            <MeetingCard
-              key={meeting.id}
-              meeting={meeting}
-              onClick={() => onMeetingClick(meeting)}
-            />
+          dayMeetings.map((meeting, index) => (
+            <div key={meeting.id} data-meeting-id={meeting.id}>
+              {/* Drop indicator */}
+              {isDragOver && dragOverIndex === index && draggedMeetingId !== meeting.id && (
+                <div className="h-0.5 bg-primary mb-1.5 sm:mb-2 rounded-full" />
+              )}
+              <MeetingCard
+                meeting={meeting}
+                onClick={() => onMeetingClick(meeting)}
+                onDragStart={() => handleDragStart(meeting.id)}
+                onDragEnd={handleDragEnd}
+              />
+              {/* Drop indicator at the end */}
+              {isDragOver && dragOverIndex === dayMeetings.length && draggedMeetingId !== meeting.id && index === dayMeetings.length - 1 && (
+                <div className="h-0.5 bg-primary mt-1.5 sm:mt-2 rounded-full" />
+              )}
+            </div>
           ))
         )}
       </div>

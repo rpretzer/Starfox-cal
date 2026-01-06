@@ -17,6 +17,21 @@ export interface Meeting {
   requiresAttendance: string;
   notes: string;
   assignedTo: string;
+  seriesId?: string; // Optional: ID to group meetings in a series
+}
+
+export interface MeetingSeries {
+  seriesId: string;
+  name: string;
+  categoryId: string;
+  startTime: string;
+  endTime: string;
+  weekType: WeekType;
+  requiresAttendance: string;
+  notes: string;
+  assignedTo: string;
+  meetingIds: number[];
+  days: string[]; // All days across all meetings in the series
 }
 
 export interface Category {
@@ -30,5 +45,33 @@ export type WeekTypeFilter = 'A' | 'B';
 
 export interface AppSettings {
   monthlyViewEnabled: boolean;
+  timezone?: string; // IANA timezone (e.g., 'America/New_York', 'Europe/London')
+  timeFormat: '12h' | '24h'; // 12-hour or 24-hour format
+}
+
+export type CalendarProvider = 'google' | 'outlook' | 'ical' | 'apple';
+
+export interface CalendarSyncConfig {
+  provider: CalendarProvider;
+  enabled: boolean;
+  name: string; // User-friendly name for this sync
+  lastSync?: Date | string;
+  syncInterval?: number; // Minutes between syncs
+  // Provider-specific config
+  googleCalendarId?: string;
+  googleClientId?: string;
+  googleClientSecret?: string;
+  outlookCalendarId?: string;
+  outlookClientId?: string;
+  outlookClientSecret?: string;
+  icsUrl?: string; // For iCal/Apple - URL to fetch ICS file
+  // OAuth tokens (stored securely)
+  accessToken?: string;
+  refreshToken?: string;
+  expiresAt?: Date | string;
+}
+
+export interface CalendarSyncSettings {
+  syncConfigs: CalendarSyncConfig[];
 }
 

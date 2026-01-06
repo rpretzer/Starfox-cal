@@ -1,11 +1,105 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useStore } from './store/useStore';
 import CalendarScreen from './components/CalendarScreen';
 import LoadingScreen from './components/LoadingScreen';
 import ErrorScreen from './components/ErrorScreen';
+import { exchangeGoogleCode, exchangeOutlookCode } from './services/calendarSync';
 
 function App() {
-  const { init, isLoading, error } = useStore();
+  const { init, isLoading, error, saveSyncConfig } = useStore();
+  const [oauthProcessing, setOauthProcessing] = useState(false);
+
+  useEffect(() => {
+    // Handle OAuth callback
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const errorParam = urlParams.get('error');
+
+    if (errorParam) {
+      alert(`OAuth error: ${errorParam}`);
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+
+    if (code) {
+      const handleOAuthCallback = async () => {
+        setOauthProcessing(true);
+        try {
+          const pendingConfigStr = sessionStorage.getItem('pendingSyncConfig');
+          if (!pendingConfigStr) {
+            throw new Error('No pending sync configuration found');
+          }
+
+          const pendingConfig = JSON.parse(pendingConfigStr);
+          const redirectUri = `${window.location.origin}${window.location.pathname}`;
+
+          let accessToken: string;
+          let refreshToken: string;
+          let expiresIn: number;
+
+          if (pendingConfig.provider === 'google') {
+            if (!pendingConfig.googleClientId || !pendingConfig.googleClientSecret) {
+              throw new Error('Google OAuth credentials not found');
+            }
+            const tokens = await exchangeGoogleCode(
+              code,
+              pendingConfig.googleClientId,
+              pendingConfig.googleClientSecret,
+              redirectUri
+            );
+            accessToken = tokens.accessToken;
+            refreshToken = tokens.refreshToken;
+            expiresIn = tokens.expiresIn;
+          } else if (pendingConfig.provider === 'outlook') {
+            if (!pendingConfig.outlookClientId || !pendingConfig.outlookClientSecret) {
+              throw new Error('Outlook OAuth credentials not found');
+            }
+            const tokens = await exchangeOutlookCode(
+              code,
+              pendingConfig.outlookClientId,
+              pendingConfig.outlookClientSecret,
+              redirectUri
+            );
+            accessToken = tokens.accessToken;
+            refreshToken = tokens.refreshToken;
+            expiresIn = tokens.expiresIn;
+          } else {
+            throw new Error(`Unsupported provider: ${pendingConfig.provider}`);
+          }
+
+          // Save sync config
+          const expiresAt = new Date();
+          expiresAt.setSeconds(expiresAt.getSeconds() + expiresIn);
+
+          const config = {
+            id: `${pendingConfig.provider}-${pendingConfig.name}`,
+            provider: pendingConfig.provider,
+            name: pendingConfig.name,
+            enabled: true,
+            googleCalendarId: pendingConfig.googleCalendarId,
+            outlookCalendarId: pendingConfig.outlookCalendarId,
+            accessToken,
+            refreshToken,
+            expiresAt: expiresAt.toISOString(),
+          };
+
+          await saveSyncConfig(config);
+          sessionStorage.removeItem('pendingSyncConfig');
+          alert('Calendar sync configured successfully!');
+        } catch (err) {
+          console.error('OAuth callback error:', err);
+          alert(`Failed to complete OAuth: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        } finally {
+          // Clean up URL
+          window.history.replaceState({}, document.title, window.location.pathname);
+          setOauthProcessing(false);
+        }
+      };
+
+      handleOAuthCallback();
+    }
+  }, [saveSyncConfig]);
 
   useEffect(() => {
     init().catch((err) => {
@@ -13,7 +107,7 @@ function App() {
     });
   }, []); // Empty deps - init should only run once on mount
 
-  if (isLoading) {
+  if (isLoading || oauthProcessing) {
     return <LoadingScreen />;
   }
 
