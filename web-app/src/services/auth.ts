@@ -149,14 +149,37 @@ class AuthService {
   }
 
   onAuthStateChange(callback: (user: AuthUser | null) => void) {
-    return supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        const user = await this.getCurrentUser();
-        callback(user);
-      } else {
-        callback(null);
-      }
-    });
+    // Check if Supabase is configured
+    if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      // Return a mock subscription if Supabase is not configured
+      return {
+        data: {
+          subscription: {
+            unsubscribe: () => {},
+          },
+        },
+      } as any;
+    }
+
+    try {
+      return supabase.auth.onAuthStateChange(async (_event, session) => {
+        if (session?.user) {
+          const user = await this.getCurrentUser();
+          callback(user);
+        } else {
+          callback(null);
+        }
+      });
+    } catch (error) {
+      console.warn('Failed to set up auth state change listener:', error);
+      return {
+        data: {
+          subscription: {
+            unsubscribe: () => {},
+          },
+        },
+      } as any;
+    }
   }
 }
 
