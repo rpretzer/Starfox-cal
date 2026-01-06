@@ -26,6 +26,22 @@ class StorageService {
   private db: IDBPDatabase<CalendarDB> | null = null;
   private currentWeekType: WeekTypeFilter = 'A';
   private currentView: ViewType = 'weekly';
+  private initPromise: Promise<void> | null = null;
+
+  // Helper method to ensure database is initialized
+  private async ensureInitialized(): Promise<void> {
+    if (this.db) return;
+    if (this.initPromise) {
+      await this.initPromise;
+      return;
+    }
+    this.initPromise = this.init();
+    try {
+      await this.initPromise;
+    } finally {
+      this.initPromise = null;
+    }
+  }
 
   async init(): Promise<void> {
     // If already initialized, don't re-initialize
@@ -138,13 +154,29 @@ class StorageService {
   }
 
   async saveMeeting(meeting: Meeting): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
-    await this.db.put('meetings', meeting);
+    await this.ensureInitialized();
+    if (!this.db) {
+      throw new Error('Database not initialized');
+    }
+    try {
+      await this.db.put('meetings', meeting);
+    } catch (error) {
+      console.error('Failed to save meeting:', error);
+      throw error;
+    }
   }
 
   async deleteMeeting(id: number): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
-    await this.db.delete('meetings', id);
+    await this.ensureInitialized();
+    if (!this.db) {
+      throw new Error('Database not initialized');
+    }
+    try {
+      await this.db.delete('meetings', id);
+    } catch (error) {
+      console.error('Failed to delete meeting:', error);
+      throw error;
+    }
   }
 
   getNextMeetingId(): Promise<number> {
@@ -180,8 +212,16 @@ class StorageService {
   }
 
   async saveCategory(category: Category): Promise<void> {
-    if (!this.db) throw new Error('Database not initialized');
-    await this.db.put('categories', category);
+    await this.ensureInitialized();
+    if (!this.db) {
+      throw new Error('Database not initialized');
+    }
+    try {
+      await this.db.put('categories', category);
+    } catch (error) {
+      console.error('Failed to save category:', error);
+      throw error;
+    }
   }
 
   async deleteCategory(id: string): Promise<void> {
