@@ -1211,22 +1211,27 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                           <button
                             onClick={async () => {
                               if (!syncFormData.name || !syncFormData.icsUrl) {
-                                alert('Please enter a name and ICS URL');
+                                showToast('Please enter a name and ICS URL', 'warning');
                                 return;
                               }
-                              const config: CalendarSyncConfig & { id: string } = {
-                                id: `${selectedProvider}-${syncFormData.name}`,
-                                provider: selectedProvider,
-                                name: syncFormData.name,
-                                enabled: true,
-                                icsUrl: syncFormData.icsUrl,
-                              };
-                              await saveSyncConfig(config);
-                              const configs = await getSyncConfigs();
-                              setSyncConfigs(configs);
-                              setShowSyncForm(false);
-                              setSelectedProvider(null);
-                              setSyncFormData({});
+                              try {
+                                const config: CalendarSyncConfig & { id: string } = {
+                                  id: `${selectedProvider}-${syncFormData.name}`,
+                                  provider: selectedProvider,
+                                  name: syncFormData.name,
+                                  enabled: true,
+                                  icsUrl: syncFormData.icsUrl,
+                                };
+                                await saveSyncConfig(config);
+                                const configs = await getSyncConfigs();
+                                setSyncConfigs(configs);
+                                setShowSyncForm(false);
+                                setSelectedProvider(null);
+                                setSyncFormData({});
+                                showToast(`Calendar sync "${config.name}" saved successfully`, 'success');
+                              } catch (error) {
+                                showToast(`Failed to save calendar sync: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+                              }
                             }}
                             className="w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors"
                           >
