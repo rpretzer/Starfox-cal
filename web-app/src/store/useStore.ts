@@ -103,6 +103,31 @@ export const useStore = create<AppState>((set, get) => ({
         
         console.log(`Loaded ${meetings.length} meetings and ${categories.length} categories`);
         
+        // If no meetings but we have categories, default meetings might still be initializing
+        // Wait a bit and try again
+        if (meetings.length === 0 && categories.length > 0) {
+          console.log('No meetings found but categories exist, waiting for default initialization...');
+          await new Promise(resolve => setTimeout(resolve, 500));
+          try {
+            const refreshedMeetings = await Promise.race([
+              storageAdapter.getAllMeetings(),
+              new Promise<Meeting[]>((resolve) => setTimeout(() => resolve([]), 2000))
+            ]);
+            if (refreshedMeetings.length > 0) {
+              console.log(`Found ${refreshedMeetings.length} meetings on refresh`);
+              return {
+                meetings: refreshedMeetings,
+                categories,
+                currentView: currentViewResult.status === 'fulfilled' ? currentViewResult.value : ('weekly' as ViewType),
+                currentWeekType: currentWeekTypeResult.status === 'fulfilled' ? currentWeekTypeResult.value : ('A' as WeekTypeFilter),
+                settings: settingsResult.status === 'fulfilled' ? settingsResult.value : defaultSettings,
+              };
+            }
+          } catch (refreshError) {
+            console.warn('Failed to refresh meetings:', refreshError);
+          }
+        }
+        
         return {
           meetings,
           categories,
@@ -118,6 +143,22 @@ export const useStore = create<AppState>((set, get) => ({
         ...data,
         isLoading: false,
       });
+      
+      // Final check: if still no meetings after load, try one more refresh
+      // This handles cases where default initialization is still in progress
+      if (data.meetings.length === 0 && data.categories.length > 0) {
+        setTimeout(async () => {
+          try {
+            const refreshedMeetings = await storageAdapter.getAllMeetings();
+            if (refreshedMeetings.length > 0) {
+              console.log(`Found ${refreshedMeetings.length} meetings on delayed refresh, updating store`);
+              set({ meetings: refreshedMeetings });
+            }
+          } catch (error) {
+            console.warn('Failed to refresh meetings on delayed check:', error);
+          }
+        }, 1000);
+      }
     } catch (error) {
       console.error('Initialization error:', error);
       // Even on error, show the UI with defaults
