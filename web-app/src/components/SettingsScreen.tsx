@@ -4,6 +4,7 @@ import { Category, MeetingSeries, WeekType, CalendarSyncConfig, CalendarProvider
 import { syncCalendar, getGoogleAuthUrl, getOutlookAuthUrl, getAppleAuthUrl } from '../services/calendarSync';
 import { getAvailableTimezones, getTimezoneDisplayName, getCurrentTimezone, timeToInputFormat, inputFormatToTime } from '../utils/timeUtils';
 import { useGlobalToast } from '../hooks/useGlobalToast';
+import CalendarSetupWizard from './CalendarSetupWizard';
 
 interface SettingsScreenProps {
   onClose: () => void;
@@ -47,6 +48,7 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
   const [syncing, setSyncing] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [connectingProvider, setConnectingProvider] = useState<CalendarProvider | null>(null);
+  const [showWizard, setShowWizard] = useState(false);
   const { showToast } = useGlobalToast();
   
   // Pending settings state
@@ -193,6 +195,31 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
     setEditingSeries(null);
     setSeriesFormData({});
   };
+
+  // Show wizard if requested
+  if (showWizard) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70 flex items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
+        <div className="relative w-full max-w-4xl">
+          <button
+            onClick={() => setShowWizard(false)}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 z-10"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <CalendarSetupWizard
+            onComplete={() => {
+              setShowWizard(false);
+              showToast('Calendar setup completed!', 'success');
+            }}
+            onSkip={() => setShowWizard(false)}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70 flex items-center justify-center p-2 sm:p-4 z-50">
@@ -806,9 +833,20 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
 
             {/* Calendar Sync */}
             <section>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                Calendar Sync
-              </h3>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                  Calendar Sync
+                </h3>
+                <button
+                  onClick={() => setShowWizard(true)}
+                  className="px-3 py-1.5 text-sm bg-primary text-white rounded-lg hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Setup Wizard
+                </button>
+              </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 Sync meetings from external calendar applications. One-way sync imports events from your external calendars.
               </p>
