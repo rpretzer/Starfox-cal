@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useStore } from '../store/useStore';
 import { Category, MeetingSeries, WeekType, CalendarSyncConfig, CalendarProvider, AppSettings } from '../types';
 import { syncCalendar, getGoogleAuthUrl, getOutlookAuthUrl, getAppleAuthUrl } from '../services/calendarSync';
 import { getAvailableTimezones, getTimezoneDisplayName, getCurrentTimezone, timeToInputFormat, inputFormatToTime } from '../utils/timeUtils';
 import { useGlobalToast } from '../hooks/useGlobalToast';
 import CalendarSetupWizard from './CalendarSetupWizard';
+import { WEB_SAFE_COLORS, getNextAvailableColor, hexToNumber, numberToHex, getAvailableColors } from '../utils/colorPalette';
 
 interface SettingsScreenProps {
   onClose: () => void;
@@ -37,6 +38,24 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryColor, setNewCategoryColor] = useState('#4287f5');
+  
+  // Get used colors from existing categories
+  const usedColors = useMemo(() => {
+    return categories.map(c => c.colorValue);
+  }, [categories]);
+  
+  // Get available colors (not used by any category)
+  const availableColors = useMemo(() => {
+    return getAvailableColors(usedColors);
+  }, [usedColors]);
+  
+  // Initialize with next available color when adding new category
+  useEffect(() => {
+    if (!editingCategory && newCategoryName === '') {
+      const nextColor = getNextAvailableColor(usedColors);
+      setNewCategoryColor(nextColor);
+    }
+  }, [usedColors, editingCategory, newCategoryName]);
   const [meetingSeries, setMeetingSeries] = useState<MeetingSeries[]>([]);
   const [editingSeries, setEditingSeries] = useState<MeetingSeries | null>(null);
   const [seriesFormData, setSeriesFormData] = useState<Partial<MeetingSeries>>({});
@@ -62,9 +81,15 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
       return;
     }
     
+    // Check if color is already used
+    const colorValue = hexToNumber(newCategoryColor);
+    if (usedColors.includes(colorValue)) {
+      showToast('This color is already used by another team. Please choose a different color.', 'warning');
+      return;
+    }
+    
     try {
       const id = newCategoryName.toLowerCase().replace(/\s+/g, '-');
-      const colorValue = parseInt(newCategoryColor.replace('#', ''), 16);
       
       await saveCategory({
         id,
@@ -73,7 +98,8 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
       });
       
       setNewCategoryName('');
-      setNewCategoryColor('#4287f5');
+      const nextColor = getNextAvailableColor([...usedColors, colorValue]);
+      setNewCategoryColor(nextColor);
       showToast(`Category "${newCategoryName.trim()}" added successfully`, 'success');
     } catch (error) {
       showToast(`Failed to add category: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
@@ -83,7 +109,7 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
   const handleEditCategory = (category: Category) => {
     setEditingCategory(category);
     setNewCategoryName(category.name);
-    setNewCategoryColor(`#${category.colorValue.toString(16).padStart(6, '0')}`);
+    setNewCategoryColor(numberToHex(category.colorValue));
   };
 
   const handleSaveCategory = async () => {
@@ -92,8 +118,17 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
       return;
     }
     
+    // Check if color is already used by another category
+    const colorValue = hexToNumber(newCategoryColor);
+    const otherCategories = categories.filter(c => c.id !== editingCategory.id);
+    const otherUsedColors = otherCategories.map(c => c.colorValue);
+    
+    if (otherUsedColors.includes(colorValue)) {
+      showToast('This color is already used by another team. Please choose a different color.', 'warning');
+      return;
+    }
+    
     try {
-      const colorValue = parseInt(newCategoryColor.replace('#', ''), 16);
       await saveCategory({
         ...editingCategory,
         name: newCategoryName.trim(),
@@ -102,7 +137,8 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
       
       setEditingCategory(null);
       setNewCategoryName('');
-      setNewCategoryColor('#4287f5');
+      const nextColor = getNextAvailableColor(usedColors);
+      setNewCategoryColor(nextColor);
       showToast(`Category "${newCategoryName.trim()}" updated successfully`, 'success');
     } catch (error) {
       showToast(`Failed to update category: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
@@ -125,7 +161,29 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
   const handleCancelEdit = () => {
     setEditingCategory(null);
     setNewCategoryName('');
-    setNewCategoryColor('#4287f5');
+    const nextColor = getNextAvailableColor(usedColors);
+    setNewCategoryColor(nextColor);
+  };
+  
+  const handleColorSelect = (color: string) => {
+    const colorValue = hexToNumber(color);
+    
+    // Check if color is already used
+    if (editingCategory) {
+      const otherCategories = categories.filter(c => c.id !== editingCategory.id);
+      const otherUsedColors = otherCategories.map(c => c.colorValue);
+      if (otherUsedColors.includes(colorValue)) {
+        showToast('This color is already used by another team. Please choose a different color.', 'warning');
+        return;
+      }
+    } else {
+      if (usedColors.includes(colorValue)) {
+        showToast('This color is already used by another team. Please choose a different color.', 'warning');
+        return;
+      }
+    }
+    
+    setNewCategoryColor(color);
   };
 
   // Load categories and meeting series on mount
@@ -545,26 +603,81 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Team Color
+                        {availableColors.length === 0 && (
+                          <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400">
+                            (All colors in use)
+                          </span>
+                        )}
                       </label>
+                      
+                      {/* Web-safe color palette */}
+                      <div className="mb-3">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                          Select from web-safe palette ({availableColors.length} available):
+                        </p>
+                        <div className="grid grid-cols-12 sm:grid-cols-18 gap-1 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 max-h-48 overflow-y-auto" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(1.5rem, 1fr))' }}>
+                          {WEB_SAFE_COLORS.map((color) => {
+                            const colorValue = hexToNumber(color);
+                            const isUsed = usedColors.includes(colorValue) && (!editingCategory || categories.find(c => c.id === editingCategory.id)?.colorValue !== colorValue);
+                            const isSelected = newCategoryColor.toUpperCase() === color.toUpperCase();
+                            
+                            return (
+                              <button
+                                key={color}
+                                type="button"
+                                onClick={() => handleColorSelect(color)}
+                                disabled={isUsed}
+                                className={`
+                                  w-6 h-6 sm:w-7 sm:h-7 rounded border-2 transition-all
+                                  ${isSelected 
+                                    ? 'border-gray-900 dark:border-white ring-2 ring-primary scale-110 z-10' 
+                                    : 'border-gray-300 dark:border-gray-500 hover:border-gray-600 dark:hover:border-gray-300'
+                                  }
+                                  ${isUsed 
+                                    ? 'opacity-30 cursor-not-allowed grayscale' 
+                                    : 'cursor-pointer hover:scale-110'
+                                  }
+                                `}
+                                style={{ backgroundColor: color }}
+                                title={isUsed ? `${color} (already used)` : color}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                      
+                      {/* Manual color input (still allow for flexibility) */}
                       <div className="flex gap-2">
                         <input
                           type="color"
                           value={newCategoryColor}
-                          onChange={(e) => setNewCategoryColor(e.target.value)}
+                          onChange={(e) => handleColorSelect(e.target.value)}
                           className="h-10 w-16 sm:w-20 rounded border-2 border-gray-300 dark:border-gray-600 cursor-pointer flex-shrink-0"
                           title="Pick a color"
                         />
                         <input
                           type="text"
                           value={newCategoryColor}
-                          onChange={(e) => setNewCategoryColor(e.target.value)}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
+                              handleColorSelect(value);
+                            } else {
+                              setNewCategoryColor(value);
+                            }
+                          }}
                           className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono text-sm"
                           placeholder="#4287f5"
                           pattern="^#[0-9A-Fa-f]{6}$"
                         />
                       </div>
+                      {usedColors.includes(hexToNumber(newCategoryColor)) && (!editingCategory || categories.find(c => c.id === editingCategory.id)?.colorValue !== hexToNumber(newCategoryColor)) && (
+                        <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                          ⚠️ This color is already used by another team
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex gap-2">
