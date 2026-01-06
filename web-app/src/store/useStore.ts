@@ -21,6 +21,8 @@ interface AppState {
   setTimezone: (timezone: string | undefined) => Promise<void>;
   setTimeFormat: (format: '12h' | '24h') => Promise<void>;
   setOAuthClientIds: (clientIds: { google?: string; microsoft?: string; apple?: string }) => Promise<void>;
+  setDefaultPublicVisibility: (visibility: 'private' | 'busy' | 'titles' | 'full') => Promise<void>;
+  setPermalinkBaseUrl: (url?: string) => Promise<void>;
   saveMeeting: (meeting: Meeting) => Promise<void>;
   deleteMeeting: (id: number) => Promise<void>;
   saveCategory: (category: Category) => Promise<void>;
@@ -144,8 +146,31 @@ export const useStore = create<AppState>((set, get) => ({
     }));
   },
 
+  setDefaultPublicVisibility: async (visibility: 'private' | 'busy' | 'titles' | 'full') => {
+    await storageService.setDefaultPublicVisibility(visibility);
+    set((state) => ({
+      settings: { ...state.settings, defaultPublicVisibility: visibility },
+    }));
+  },
+
+  setPermalinkBaseUrl: async (url?: string) => {
+    await storageService.setPermalinkBaseUrl(url);
+    set((state) => ({
+      settings: { ...state.settings, permalinkBaseUrl: url },
+    }));
+  },
+
   saveMeeting: async (meeting: Meeting) => {
-    await storageService.saveMeeting(meeting);
+    // Generate permalink if meeting is saved and doesn't have one
+    let meetingToSave = meeting;
+    if (meeting.id > 0 && !meeting.permalink) {
+      const { generateMeetingPermalink } = await import('../utils/shareUtils');
+      meetingToSave = {
+        ...meeting,
+        permalink: generateMeetingPermalink(meeting.id, get().settings.permalinkBaseUrl),
+      };
+    }
+    await storageService.saveMeeting(meetingToSave);
     await get().refreshMeetings();
   },
 

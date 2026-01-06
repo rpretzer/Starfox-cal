@@ -138,7 +138,7 @@ export default function DayColumn({ day, onMeetingClick }: DayColumnProps) {
   return (
     <div
       ref={containerRef}
-      className={`w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border-2 p-2 sm:p-3 lg:p-4 flex flex-col min-h-0 transition-colors ${
+      className={`w-full min-w-[140px] sm:min-w-0 bg-white dark:bg-gray-800 rounded-lg shadow-sm border-2 p-2 sm:p-3 lg:p-4 flex flex-col min-h-[200px] sm:min-h-[300px] transition-colors ${
         isDragOver
           ? 'border-primary bg-blue-50 dark:bg-blue-900/20 border-dashed'
           : 'border-gray-200 dark:border-gray-700'

@@ -18,6 +18,11 @@ export interface Meeting {
   notes: string;
   assignedTo: string;
   seriesId?: string; // Optional: ID to group meetings in a series
+  // Share and visibility
+  meetingLink?: string; // Zoom/Teams/Meet link
+  meetingLinkType?: 'zoom' | 'teams' | 'meet' | 'other';
+  publicVisibility?: 'private' | 'busy' | 'titles' | 'full'; // Public visibility setting
+  permalink?: string; // Short permalink for sharing
 }
 
 export interface MeetingSeries {
@@ -52,6 +57,8 @@ export interface AppSettings {
     microsoft?: string;
     apple?: string;
   };
+  defaultPublicVisibility?: 'private' | 'busy' | 'titles' | 'full'; // Default visibility for new meetings
+  permalinkBaseUrl?: string; // Base URL for permalinks (e.g., 'https://go.rspmgmt.com')
 }
 
 export type CalendarProvider = 'google' | 'outlook' | 'ical' | 'apple';

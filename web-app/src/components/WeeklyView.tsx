@@ -8,8 +8,8 @@ interface WeeklyViewProps {
 
 export default function WeeklyView({ onMeetingClick }: WeeklyViewProps) {
   return (
-    <div className="w-full">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 lg:gap-4">
+    <div className="w-full overflow-x-auto">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 lg:gap-4 min-w-max sm:min-w-0">
         {DAYS_OF_WEEK.map((day) => (
           <DayColumn
             key={day}

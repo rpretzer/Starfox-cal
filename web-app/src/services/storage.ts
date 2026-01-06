@@ -224,6 +224,8 @@ class StorageService {
     const timezone = await this.db.get('settings', 'timezone');
     const timeFormat = await this.db.get('settings', 'timeFormat');
     const oauthClientIds = await this.db.get('settings', 'oauthClientIds');
+    const defaultPublicVisibility = await this.db.get('settings', 'defaultPublicVisibility');
+    const permalinkBaseUrl = await this.db.get('settings', 'permalinkBaseUrl');
 
     const settings: AppSettings = {
       monthlyViewEnabled: false,
@@ -260,6 +262,18 @@ class StorageService {
       }
     }
 
+    // Handle default public visibility
+    if (defaultPublicVisibility !== undefined && defaultPublicVisibility !== null && typeof defaultPublicVisibility === 'string') {
+      if (['private', 'busy', 'titles', 'full'].includes(defaultPublicVisibility)) {
+        settings.defaultPublicVisibility = defaultPublicVisibility as 'private' | 'busy' | 'titles' | 'full';
+      }
+    }
+
+    // Handle permalink base URL
+    if (permalinkBaseUrl !== undefined && permalinkBaseUrl !== null && typeof permalinkBaseUrl === 'string') {
+      settings.permalinkBaseUrl = permalinkBaseUrl;
+    }
+
     return settings;
   }
 
@@ -285,6 +299,20 @@ class StorageService {
   async setOAuthClientIds(clientIds: { google?: string; microsoft?: string; apple?: string }): Promise<void> {
     if (!this.db) throw new Error('Database not initialized');
     await this.db.put('settings', JSON.stringify(clientIds), 'oauthClientIds');
+  }
+
+  async setDefaultPublicVisibility(visibility: 'private' | 'busy' | 'titles' | 'full'): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    await this.db.put('settings', visibility, 'defaultPublicVisibility');
+  }
+
+  async setPermalinkBaseUrl(url?: string): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    if (url === undefined) {
+      await this.db.delete('settings', 'permalinkBaseUrl');
+    } else {
+      await this.db.put('settings', url, 'permalinkBaseUrl');
+    }
   }
 
   // Meeting Series Management

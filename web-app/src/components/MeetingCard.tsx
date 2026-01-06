@@ -65,28 +65,54 @@ export default function MeetingCard({ meeting, onClick, onDragStart, onDragEnd }
       }`}
       style={{ borderLeftColor: color }}
     >
-      {/* Delete button - appears on hover */}
+      {/* Action buttons - appear on hover */}
       {showDelete && (
-        <button
-          onClick={handleDelete}
-          className="absolute top-1 right-1 p-1 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg transition-colors z-10"
-          title="Delete meeting"
-          aria-label="Delete meeting"
-        >
-          <svg
-            className="w-3 h-3 sm:w-4 sm:h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        <div className="absolute top-1 right-1 flex gap-1 z-10">
+          {meeting.meetingLink && (
+            <a
+              href={meeting.meetingLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="p-1 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-lg transition-colors"
+              title={`Open ${meeting.meetingLinkType === 'zoom' ? 'Zoom' : meeting.meetingLinkType === 'teams' ? 'Teams' : meeting.meetingLinkType === 'meet' ? 'Meet' : 'meeting'} link`}
+            >
+              <svg
+                className="w-3 h-3 sm:w-4 sm:h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                />
+              </svg>
+            </a>
+          )}
+          <button
+            onClick={handleDelete}
+            className="p-1 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-lg transition-colors"
+            title="Delete meeting"
+            aria-label="Delete meeting"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
+            <svg
+              className="w-3 h-3 sm:w-4 sm:h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
       )}
       <div className="font-semibold text-gray-900 dark:text-gray-100 text-xs sm:text-sm mb-0.5 sm:mb-1 line-clamp-2 pr-6">{meeting.name}</div>
       <div className="text-xs text-gray-600 dark:text-gray-400 mb-0.5 sm:mb-1">

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import CalendarHeader from './CalendarHeader';
 import WeeklyView from './WeeklyView';
@@ -8,13 +8,40 @@ import MonthlyView from './MonthlyView';
 import TeamsView from './TeamsView';
 import MeetingDetailModal from './MeetingDetailModal';
 import SettingsScreen from './SettingsScreen';
-import { Meeting } from '../types';
+import { Meeting, ViewType, WeekTypeFilter } from '../types';
 
 export default function CalendarScreen() {
-  const { currentView, getNextMeetingId } = useStore();
+  const { currentView, getNextMeetingId, setCurrentView, setCurrentWeekType } = useStore();
   const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [editingMeeting, setEditingMeeting] = useState<Meeting | null>(null);
+
+  // Handle URL parameters for permalinks
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const viewParam = params.get('view') as ViewType | null;
+    const weekParam = params.get('week') as WeekTypeFilter | null;
+    const meetingIdParam = params.get('meeting');
+
+    if (viewParam && ['weekly', 'conflicts', 'categories', 'monthly', 'teams'].includes(viewParam)) {
+      setCurrentView(viewParam);
+    }
+    if (weekParam && (weekParam === 'A' || weekParam === 'B')) {
+      setCurrentWeekType(weekParam);
+    }
+    if (meetingIdParam) {
+      const meetingId = parseInt(meetingIdParam, 10);
+      if (!isNaN(meetingId)) {
+        // Find and open the meeting
+        const store = useStore.getState();
+        const meeting = store.getMeeting(meetingId);
+        if (meeting) {
+          setEditingMeeting(meeting);
+          setIsMeetingModalOpen(true);
+        }
+      }
+    }
+  }, [setCurrentView, setCurrentWeekType]);
 
   const handleAddMeeting = async () => {
     const newId = await getNextMeetingId();

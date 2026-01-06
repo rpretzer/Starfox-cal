@@ -4,6 +4,7 @@ import { Meeting, WeekType } from '../types';
 import { DAYS_OF_WEEK } from '../constants';
 import { timeToInputFormat, inputFormatToTime } from '../utils/timeUtils';
 import { useGlobalToast } from '../hooks/useGlobalToast';
+import { shareMeeting, copyToClipboard, generateMeetingPermalink } from '../utils/shareUtils';
 
 interface MeetingDetailModalProps {
   meeting: Meeting;
@@ -233,6 +234,126 @@ export default function MeetingDetailModal({ meeting, onClose }: MeetingDetailMo
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
               />
             </div>
+
+            {/* Meeting Link */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Meeting Link (Zoom/Teams/Meet)
+              </label>
+              <div className="flex gap-2">
+                <select
+                  value={formData.meetingLinkType || 'other'}
+                  onChange={(e) => setFormData({ ...formData, meetingLinkType: e.target.value as 'zoom' | 'teams' | 'meet' | 'other' })}
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                >
+                  <option value="zoom">Zoom</option>
+                  <option value="teams">Teams</option>
+                  <option value="meet">Google Meet</option>
+                  <option value="other">Other</option>
+                </select>
+                <input
+                  type="url"
+                  value={formData.meetingLink || ''}
+                  onChange={(e) => setFormData({ ...formData, meetingLink: e.target.value })}
+                  placeholder="https://..."
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                />
+              </div>
+            </div>
+
+            {/* Public Visibility */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Public Visibility
+              </label>
+              <select
+                value={formData.publicVisibility || 'private'}
+                onChange={(e) => setFormData({ ...formData, publicVisibility: e.target.value as 'private' | 'busy' | 'titles' | 'full' })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              >
+                <option value="private">Private (not visible)</option>
+                <option value="busy">Busy (time only)</option>
+                <option value="titles">Titles Only</option>
+                <option value="full">Full Details</option>
+              </select>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Controls what others can see when viewing your calendar
+              </p>
+            </div>
+
+            {/* Share Section */}
+            {meeting.id > 0 && (
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const permalink = formData.permalink || generateMeetingPermalink(meeting.id);
+                        await shareMeeting(formData, permalink);
+                        showToast('Meeting shared successfully', 'success');
+                      } catch (error) {
+                        if (error instanceof Error && error.message === 'Copied to clipboard') {
+                          showToast('Meeting link copied to clipboard', 'success');
+                        } else {
+                          showToast(`Failed to share: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+                        }
+                      }
+                    }}
+                    className="flex-1 min-w-[120px] px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 dark:hover:bg-green-700 transition-colors text-sm flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                    </svg>
+                    Share
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const permalink = formData.permalink || generateMeetingPermalink(meeting.id);
+                        await copyToClipboard(permalink);
+                        showToast('Permalink copied to clipboard', 'success');
+                      } catch (error) {
+                        showToast(`Failed to copy: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+                      }
+                    }}
+                    className="px-3 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 dark:hover:bg-gray-700 transition-colors text-sm flex items-center justify-center gap-2"
+                    title="Copy permalink"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Link
+                  </button>
+                  {formData.meetingLink && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await copyToClipboard(formData.meetingLink!);
+                          showToast('Meeting link copied to clipboard', 'success');
+                        } catch (error) {
+                          showToast(`Failed to copy: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+                        }
+                      }}
+                      className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors text-sm flex items-center justify-center gap-2"
+                      title="Copy meeting link"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                      </svg>
+                      {formData.meetingLinkType === 'zoom' ? 'Zoom' : formData.meetingLinkType === 'teams' ? 'Teams' : formData.meetingLinkType === 'meet' ? 'Meet' : 'Link'}
+                    </button>
+                  )}
+                </div>
+                {formData.permalink && (
+                  <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    Permalink: <code className="bg-gray-100 dark:bg-gray-700 px-1 rounded">{formData.permalink}</code>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4">
               <button
