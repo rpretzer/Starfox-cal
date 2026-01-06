@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useStore } from '../store/useStore';
 import { Category, MeetingSeries, WeekType, CalendarSyncConfig, CalendarProvider, AppSettings } from '../types';
 import { syncCalendar, getGoogleAuthUrl, getOutlookAuthUrl, getAppleAuthUrl } from '../services/calendarSync';
@@ -38,6 +38,8 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryColor, setNewCategoryColor] = useState('#4287f5');
+  const [showColorPalette, setShowColorPalette] = useState(false);
+  const colorPaletteRef = useRef<HTMLDivElement>(null);
   
   // Get used colors from existing categories
   const usedColors = useMemo(() => {
@@ -195,6 +197,20 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
     }
     
     setNewCategoryColor(color);
+    // Optionally close palette after selection (or keep it open for multiple selections)
+    // setShowColorPalette(false);
+  };
+
+  const handleOpenColorPalette = () => {
+    setShowColorPalette(true);
+    // Pre-select first available color if current color is used
+    const currentColorValue = hexToNumber(newCategoryColor);
+    if (usedColors.includes(currentColorValue) && (!editingCategory || categories.find(c => c.id === editingCategory.id)?.colorValue !== currentColorValue)) {
+      const firstAvailable = availableColors[0];
+      if (firstAvailable) {
+        setNewCategoryColor(firstAvailable);
+      }
+    }
   };
 
   // Load categories and meeting series on mount
@@ -623,41 +639,85 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                         )}
                       </label>
                       
-                      {/* Web-safe color palette */}
+                      {/* Color Preview/Swatch - Click to open palette */}
                       <div className="mb-3">
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                          Select from web-safe palette ({availableColors.length} available):
-                        </p>
-                        <div className="grid grid-cols-12 sm:grid-cols-18 gap-1 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 max-h-48 overflow-y-auto" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(1.5rem, 1fr))' }}>
-                          {WEB_SAFE_COLORS.map((color) => {
-                            const colorValue = hexToNumber(color);
-                            const isUsed = usedColors.includes(colorValue) && (!editingCategory || categories.find(c => c.id === editingCategory.id)?.colorValue !== colorValue);
-                            const isSelected = newCategoryColor.toUpperCase() === color.toUpperCase();
-                            
-                            return (
-                              <button
-                                key={color}
-                                type="button"
-                                onClick={() => handleColorSelect(color)}
-                                disabled={isUsed}
-                                className={`
-                                  w-6 h-6 sm:w-7 sm:h-7 rounded border-2 transition-all
-                                  ${isSelected 
-                                    ? 'border-gray-900 dark:border-white ring-2 ring-primary scale-110 z-10' 
-                                    : 'border-gray-300 dark:border-gray-500 hover:border-gray-600 dark:hover:border-gray-300'
-                                  }
-                                  ${isUsed 
-                                    ? 'opacity-30 cursor-not-allowed grayscale' 
-                                    : 'cursor-pointer hover:scale-110'
-                                  }
-                                `}
-                                style={{ backgroundColor: color }}
-                                title={isUsed ? `${color} (already used)` : color}
-                              />
-                            );
-                          })}
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={handleOpenColorPalette}
+                            className="flex items-center gap-2 px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:border-gray-400 dark:hover:border-gray-500 transition-colors bg-white dark:bg-gray-800"
+                            title="Click to open color palette"
+                          >
+                            <div
+                              className="w-8 h-8 rounded border-2 border-gray-300 dark:border-gray-600"
+                              style={{ backgroundColor: newCategoryColor }}
+                            />
+                            <span className="text-sm font-mono text-gray-700 dark:text-gray-300">
+                              {newCategoryColor}
+                            </span>
+                            <svg className={`w-4 h-4 text-gray-500 transition-transform ${showColorPalette ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+                          {usedColors.includes(hexToNumber(newCategoryColor)) && (!editingCategory || categories.find(c => c.id === editingCategory.id)?.colorValue !== hexToNumber(newCategoryColor)) && (
+                            <span className="text-xs text-red-600 dark:text-red-400">
+                              ⚠️ Color already used
+                            </span>
+                          )}
                         </div>
                       </div>
+
+                      {/* Web-safe color palette - Collapsible */}
+                      {showColorPalette && (
+                        <div className="mb-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              Select from web-safe palette ({availableColors.length} available):
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => setShowColorPalette(false)}
+                              className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                            >
+                              Close
+                            </button>
+                          </div>
+                          <div 
+                            ref={colorPaletteRef}
+                            className="grid grid-cols-12 sm:grid-cols-18 gap-1 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 max-h-48 overflow-y-auto" 
+                            style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(1.5rem, 1fr))' }}
+                          >
+                            {WEB_SAFE_COLORS.map((color) => {
+                              const colorValue = hexToNumber(color);
+                              const isUsed = usedColors.includes(colorValue) && (!editingCategory || categories.find(c => c.id === editingCategory.id)?.colorValue !== colorValue);
+                              const isSelected = newCategoryColor.toUpperCase() === color.toUpperCase();
+                              
+                              return (
+                                <button
+                                  key={color}
+                                  type="button"
+                                  onClick={() => handleColorSelect(color)}
+                                  disabled={isUsed}
+                                  data-color={color.toUpperCase()}
+                                  className={`
+                                    w-6 h-6 sm:w-7 sm:h-7 rounded border-2 transition-all
+                                    ${isSelected 
+                                      ? 'border-gray-900 dark:border-white ring-2 ring-primary scale-110 z-10' 
+                                      : 'border-gray-300 dark:border-gray-500 hover:border-gray-600 dark:hover:border-gray-300'
+                                    }
+                                    ${isUsed 
+                                      ? 'opacity-30 cursor-not-allowed grayscale' 
+                                      : 'cursor-pointer hover:scale-110'
+                                    }
+                                  `}
+                                  style={{ backgroundColor: color }}
+                                  title={isUsed ? `${color} (already used)` : color}
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                       
                       {/* Manual color input (still allow for flexibility) */}
                       <div className="flex gap-2">
@@ -679,16 +739,12 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                               setNewCategoryColor(value);
                             }
                           }}
+                          onFocus={handleOpenColorPalette}
                           className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 font-mono text-sm"
                           placeholder="#4287f5"
                           pattern="^#[0-9A-Fa-f]{6}$"
                         />
                       </div>
-                      {usedColors.includes(hexToNumber(newCategoryColor)) && (!editingCategory || categories.find(c => c.id === editingCategory.id)?.colorValue !== hexToNumber(newCategoryColor)) && (
-                        <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                          ⚠️ This color is already used by another team
-                        </p>
-                      )}
                     </div>
                   </div>
                   <div className="flex gap-2">
