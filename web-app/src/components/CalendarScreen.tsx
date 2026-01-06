@@ -53,14 +53,14 @@ export default function CalendarScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="bg-white shadow-sm">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
-            <h1 className="text-2xl font-bold text-gray-900">Sprint Calendar</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Sprint Calendar</h1>
             <button
               onClick={handleAddMeeting}
-              className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
+              className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors flex items-center gap-2"
             >
               <span>+</span>
               <span>Add Meeting</span>

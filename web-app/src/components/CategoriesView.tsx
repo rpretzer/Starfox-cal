@@ -22,9 +22,9 @@ export default function CategoriesView({ onMeetingClick }: CategoriesViewProps) 
         const color = `#${category.colorValue.toString(16).padStart(6, '0')}`;
 
         return (
-          <div key={category.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div key={category.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
             <h3
-              className="font-semibold text-lg mb-4 pb-2 border-b"
+              className="font-semibold text-lg mb-4 pb-2 border-b dark:border-gray-700"
               style={{ borderBottomColor: color, color }}
             >
               {category.name}

@@ -20,6 +20,13 @@ body {
   color: #111827; /* gray-900 */
 }
 
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #111827; /* gray-900 */
+    color: #f9fafb; /* gray-50 */
+  }
+}
+
 #root {
   min-height: 100vh;
 }
