@@ -1,4 +1,3 @@
-import { useStore } from '../store/useStore';
 import { DAYS_OF_WEEK } from '../constants';
 import DayColumn from './DayColumn';
 import { Meeting } from '../types';

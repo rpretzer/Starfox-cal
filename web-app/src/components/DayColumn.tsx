@@ -9,9 +9,8 @@ interface DayColumnProps {
 }
 
 export default function DayColumn({ day, onMeetingClick }: DayColumnProps) {
-  const { getMeetingsForDay } = useStore();
+  const { getMeetingsForDay, currentWeekType } = useStore();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
-  const { currentWeekType } = useStore();
 
   useEffect(() => {
     getMeetingsForDay(day).then(setMeetings);
