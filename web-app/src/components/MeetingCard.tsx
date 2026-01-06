@@ -36,17 +36,17 @@ export default function MeetingCard({ meeting, onClick }: MeetingCardProps) {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onClick={onClick}
-      className={`bg-white dark:bg-gray-700 border-l-4 rounded p-3 shadow-sm hover:shadow-md dark:hover:shadow-lg transition-all cursor-move ${
+      className={`bg-white dark:bg-gray-700 border-l-4 rounded p-2 sm:p-3 shadow-sm hover:shadow-md dark:hover:shadow-lg transition-all cursor-move ${
         isDragging ? 'opacity-50 scale-95' : ''
       }`}
       style={{ borderLeftColor: color }}
     >
-      <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm mb-1">{meeting.name}</div>
-      <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+      <div className="font-semibold text-gray-900 dark:text-gray-100 text-xs sm:text-sm mb-0.5 sm:mb-1 line-clamp-2">{meeting.name}</div>
+      <div className="text-xs text-gray-600 dark:text-gray-400 mb-0.5 sm:mb-1">
         {meeting.startTime} - {meeting.endTime}
       </div>
       {category && (
-        <div className="text-xs text-gray-500 dark:text-gray-400">
+        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
           {category.name}
         </div>
       )}

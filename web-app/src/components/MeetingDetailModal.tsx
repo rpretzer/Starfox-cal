@@ -53,16 +53,17 @@ export default function MeetingDetailModal({ meeting, onClose }: MeetingDetailMo
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+    <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70 flex items-center justify-center p-2 sm:p-4 z-50">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+        <div className="p-4 sm:p-6">
+          <div className="flex justify-between items-center mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-gray-100">
               {meeting.id > 0 ? 'Edit Meeting' : 'Add Meeting'}
             </h2>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl"
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl sm:text-3xl flex-shrink-0 ml-2"
+              aria-label="Close"
             >
               ×
             </button>
@@ -123,7 +124,7 @@ export default function MeetingDetailModal({ meeting, onClose }: MeetingDetailMo
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Start Time *
@@ -206,11 +207,11 @@ export default function MeetingDetailModal({ meeting, onClose }: MeetingDetailMo
               />
             </div>
 
-            <div className="flex gap-3 pt-4">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4">
               <button
                 type="submit"
                 disabled={isSaving}
-                className="flex-1 bg-primary text-white py-2 px-4 rounded-lg hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors disabled:opacity-50"
+                className="flex-1 bg-primary text-white py-2 px-4 rounded-lg hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors disabled:opacity-50 text-sm sm:text-base"
               >
                 {isSaving ? 'Saving...' : 'Save'}
               </button>
@@ -218,7 +219,7 @@ export default function MeetingDetailModal({ meeting, onClose }: MeetingDetailMo
                 <button
                   type="button"
                   onClick={handleDelete}
-                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 dark:hover:bg-red-700 transition-colors"
+                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 dark:hover:bg-red-700 transition-colors text-sm sm:text-base"
                 >
                   Delete
                 </button>
@@ -226,7 +227,7 @@ export default function MeetingDetailModal({ meeting, onClose }: MeetingDetailMo
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm sm:text-base"
               >
                 Cancel
               </button>

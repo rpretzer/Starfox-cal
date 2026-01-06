@@ -58,7 +58,7 @@ export default function DayColumn({ day, onMeetingClick }: DayColumnProps) {
 
   return (
     <div
-      className={`w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border-2 p-4 flex flex-col min-h-0 transition-colors ${
+      className={`w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm border-2 p-2 sm:p-3 lg:p-4 flex flex-col min-h-0 transition-colors ${
         isDragOver
           ? 'border-primary bg-blue-50 dark:bg-blue-900/20 border-dashed'
           : 'border-gray-200 dark:border-gray-700'
@@ -67,12 +67,12 @@ export default function DayColumn({ day, onMeetingClick }: DayColumnProps) {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-4 text-center">
+      <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-2 sm:mb-3 lg:mb-4 text-center text-sm sm:text-base">
         {day}
       </h3>
-      <div className="space-y-2 flex-1 overflow-y-auto">
+      <div className="space-y-1.5 sm:space-y-2 flex-1 overflow-y-auto">
         {dayMeetings.length === 0 ? (
-          <p className="text-gray-400 dark:text-gray-500 text-sm text-center py-8">
+          <p className="text-gray-400 dark:text-gray-500 text-xs sm:text-sm text-center py-4 sm:py-8">
             {isDragOver ? 'Drop meeting here' : 'No meetings'}
           </p>
         ) : (
