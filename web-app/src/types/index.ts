@@ -26,7 +26,6 @@ export interface Meeting {
   // Synced meeting fields
   syncSource?: 'google' | 'outlook' | 'apple' | 'ical'; // Source of synced meeting
   externalId?: string; // External calendar event ID
-  meetingRoomLink?: string; // Meeting room or video chat link (editable for synced meetings)
   importedAttendees?: string[]; // Attendees imported from external calendar (read-only)
 }
 

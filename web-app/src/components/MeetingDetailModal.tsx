@@ -38,7 +38,8 @@ export default function MeetingDetailModal({ meeting, onClose }: MeetingDetailMo
         ? {
             ...meeting, // Start with original meeting to preserve read-only fields
             notes: formData.notes, // Allow notes to be edited
-            meetingRoomLink: formData.meetingRoomLink, // Allow meeting room link to be edited
+            meetingLink: formData.meetingLink, // Allow meeting link to be edited
+            meetingLinkType: formData.meetingLinkType, // Allow meeting link type to be edited
             categoryId: formData.categoryId, // Allow category to be changed
             requiresAttendance: formData.requiresAttendance, // Allow required attendance to be changed
             assignedTo: formData.assignedTo, // Allow assigned to be changed
@@ -255,23 +256,6 @@ export default function MeetingDetailModal({ meeting, onClose }: MeetingDetailMo
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                 placeholder={isSyncedMeeting ? "Add notes for this synced meeting..." : ""}
               />
-            </div>
-
-            {/* Meeting Room / Video Chat Link - editable for synced meetings */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Meeting Room / Video Chat Link
-              </label>
-              <input
-                type="url"
-                value={formData.meetingRoomLink || ''}
-                onChange={(e) => setFormData({ ...formData, meetingRoomLink: e.target.value })}
-                placeholder="https://zoom.us/j/... or https://teams.microsoft.com/..."
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-              />
-              {isSyncedMeeting && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Add a meeting room or video chat link for this synced meeting</p>
-              )}
             </div>
 
             {/* Imported Attendees - read-only for synced meetings */}
