@@ -37,12 +37,12 @@ export default function TeamsView({ onMeetingClick }: TeamsViewProps) {
             {/* Team Header with Twistie */}
             <button
               onClick={() => toggleTeam(category.id)}
-              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
+              className="w-full flex items-center justify-between p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left touch-manipulation"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                 {/* Twistie Icon */}
                 <svg
-                  className={`w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform ${
+                  className={`w-4 h-4 sm:w-5 sm:h-5 text-gray-500 dark:text-gray-400 transition-transform flex-shrink-0 ${
                     isExpanded ? 'rotate-90' : ''
                   }`}
                   fill="none"
@@ -58,21 +58,21 @@ export default function TeamsView({ onMeetingClick }: TeamsViewProps) {
                 </svg>
                 {/* Color Indicator */}
                 <div
-                  className="w-4 h-4 rounded border border-gray-300 dark:border-gray-600"
+                  className="w-4 h-4 rounded border border-gray-300 dark:border-gray-600 flex-shrink-0"
                   style={{ backgroundColor: color }}
                 />
-                <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm sm:text-base truncate">
                   {category.name}
                 </h3>
               </div>
-              <span className="text-sm text-gray-500 dark:text-gray-400">
+              <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 flex-shrink-0 ml-2">
                 {isExpanded ? 'Collapse' : 'Expand'}
               </span>
             </button>
 
             {/* Team Calendar (shown when expanded) */}
             {isExpanded && (
-              <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="p-2 sm:p-3 lg:p-4 border-t border-gray-200 dark:border-gray-700">
                 <TeamCalendar
                   categoryId={category.id}
                   onMeetingClick={onMeetingClick}

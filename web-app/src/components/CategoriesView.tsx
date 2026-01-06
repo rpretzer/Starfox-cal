@@ -14,7 +14,7 @@ export default function CategoriesView({ onMeetingClick }: CategoriesViewProps) 
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {categories.map((category) => {
         const categoryMeetings = getMeetingsForCategory(category.id);
         if (categoryMeetings.length === 0) return null;
@@ -22,14 +22,14 @@ export default function CategoriesView({ onMeetingClick }: CategoriesViewProps) 
         const color = `#${category.colorValue.toString(16).padStart(6, '0')}`;
 
         return (
-          <div key={category.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+          <div key={category.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-3 sm:p-4">
             <h3
-              className="font-semibold text-lg mb-4 pb-2 border-b dark:border-gray-700"
+              className="font-semibold text-base sm:text-lg mb-3 sm:mb-4 pb-2 border-b dark:border-gray-700"
               style={{ borderBottomColor: color, color }}
             >
               {category.name}
             </h3>
-            <div className="space-y-2">
+            <div className="space-y-1.5 sm:space-y-2">
               {categoryMeetings.map((meeting) => (
                 <MeetingCard
                   key={meeting.id}

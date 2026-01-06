@@ -92,7 +92,7 @@ function TeamDayColumn({ day, categoryId, onMeetingClick }: { day: string; categ
 export default function TeamCalendar({ categoryId, onMeetingClick }: TeamCalendarProps) {
   return (
     <div className="w-full">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3">
         {DAYS_OF_WEEK.map((day) => (
           <TeamDayColumn
             key={day}

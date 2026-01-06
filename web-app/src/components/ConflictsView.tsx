@@ -31,14 +31,14 @@ export default function ConflictsView({ onMeetingClick }: ConflictsViewProps) {
 
   if (conflicts.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 text-center">
-        <p className="text-gray-500 dark:text-gray-400">No conflicts detected in the current week view.</p>
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 sm:p-8 text-center">
+        <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">No conflicts detected in the current week view.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {conflicts.map((conflict, idx) => {
         const meeting1 = getMeeting(conflict.meetings[0]);
         const meeting2 = getMeeting(conflict.meetings[1]);
@@ -48,26 +48,26 @@ export default function ConflictsView({ onMeetingClick }: ConflictsViewProps) {
         return (
           <div
             key={idx}
-            className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 dark:border-red-600 rounded-lg p-4"
+            className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 dark:border-red-600 rounded-lg p-3 sm:p-4"
           >
-            <div className="font-semibold text-red-800 dark:text-red-300 mb-2">
+            <div className="font-semibold text-red-800 dark:text-red-300 mb-2 text-sm sm:text-base">
               Conflict Detected: {conflict.day} at {conflict.time}
             </div>
             <div className="space-y-2">
               <div
                 onClick={() => onMeetingClick(meeting1)}
-                className="bg-white dark:bg-gray-700 rounded p-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100"
+                className="bg-white dark:bg-gray-700 rounded p-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 text-sm sm:text-base touch-manipulation"
               >
                 {meeting1.name}
               </div>
               <div
                 onClick={() => onMeetingClick(meeting2)}
-                className="bg-white dark:bg-gray-700 rounded p-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100"
+                className="bg-white dark:bg-gray-700 rounded p-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-900 dark:text-gray-100 text-sm sm:text-base touch-manipulation"
               >
                 {meeting2.name}
               </div>
             </div>
-            <p className="text-sm text-red-700 dark:text-red-400 mt-2 italic">
+            <p className="text-xs sm:text-sm text-red-700 dark:text-red-400 mt-2 italic">
               Recommendation: Rotate representatives or adjust timing
             </p>
           </div>
