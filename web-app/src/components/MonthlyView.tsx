@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore';
 import { Meeting } from '../types';
 import { DAYS_OF_WEEK } from '../constants';
 import { formatTime } from '../utils/timeUtils';
+import DayMeetingsModal from './DayMeetingsModal';
 
 interface MonthlyViewProps {
   onMeetingClick: (meeting: Meeting) => void;
@@ -25,6 +26,8 @@ const MONTH_NAMES = [
 export default function MonthlyView({ onMeetingClick }: MonthlyViewProps) {
   const { meetings, getCategory, settings } = useStore();
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [selectedDayMeetings, setSelectedDayMeetings] = useState<Meeting[]>([]);
 
   // Generate calendar grid
   const calendarDays = useMemo(() => {
@@ -197,16 +200,27 @@ export default function MonthlyView({ onMeetingClick }: MonthlyViewProps) {
               return d.startsWith(dayName.substring(0, 3));
             });
 
+            const handleDayClick = () => {
+              if (calendarDay.isCurrentMonth) {
+                const dayMeetings = getMeetingsForDate(calendarDay.date);
+                setSelectedDay(calendarDay.date);
+                setSelectedDayMeetings(dayMeetings);
+              }
+            };
+
             return (
               <div
                 key={`${calendarDay.date.getTime()}-${calendarDay.dayOfMonth}-${idx}`}
+                onClick={handleDayClick}
                 className={`min-h-[80px] sm:min-h-[100px] lg:min-h-[120px] border-r border-b border-gray-200 dark:border-gray-700 p-1 sm:p-2 ${
                   !calendarDay.isCurrentMonth
                     ? 'bg-gray-50 dark:bg-gray-900/50'
                     : isWorkDay
                     ? 'bg-white dark:bg-gray-800'
                     : 'bg-gray-50 dark:bg-gray-900/30'
-                } ${calendarDay.isToday ? 'ring-2 ring-primary ring-inset' : ''}`}
+                } ${calendarDay.isToday ? 'ring-2 ring-primary ring-inset' : ''} ${
+                  calendarDay.isCurrentMonth ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors' : ''
+                }`}
               >
                 <div
                   className={`text-xs sm:text-sm font-medium mb-1 ${
@@ -226,7 +240,10 @@ export default function MonthlyView({ onMeetingClick }: MonthlyViewProps) {
                     return (
                       <div
                         key={meeting.id}
-                        onClick={() => onMeetingClick(meeting)}
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent day cell click
+                          onMeetingClick(meeting);
+                        }}
                         className="text-[10px] sm:text-xs p-0.5 sm:p-1 rounded cursor-pointer hover:opacity-80 transition-opacity truncate border-l-2"
                         style={{ borderLeftColor: color }}
                         title={`${meeting.name} (${formatTime(meeting.startTime, settings.timeFormat)} - ${formatTime(meeting.endTime, settings.timeFormat)})`}
@@ -251,6 +268,19 @@ export default function MonthlyView({ onMeetingClick }: MonthlyViewProps) {
           })}
         </div>
       </div>
+
+      {/* Day Meetings Modal */}
+      {selectedDay && (
+        <DayMeetingsModal
+          date={selectedDay}
+          meetings={selectedDayMeetings}
+          onClose={() => {
+            setSelectedDay(null);
+            setSelectedDayMeetings([]);
+          }}
+          onMeetingClick={onMeetingClick}
+        />
+      )}
     </div>
   );
 }

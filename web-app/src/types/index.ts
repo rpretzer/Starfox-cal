@@ -23,6 +23,11 @@ export interface Meeting {
   meetingLinkType?: 'zoom' | 'teams' | 'meet' | 'other';
   publicVisibility?: 'private' | 'busy' | 'titles' | 'full'; // Public visibility setting
   permalink?: string; // Short permalink for sharing
+  // Synced meeting fields
+  syncSource?: 'google' | 'outlook' | 'apple' | 'ical'; // Source of synced meeting
+  externalId?: string; // External calendar event ID
+  meetingRoomLink?: string; // Meeting room or video chat link (editable for synced meetings)
+  importedAttendees?: string[]; // Attendees imported from external calendar (read-only)
 }
 
 export interface MeetingSeries {

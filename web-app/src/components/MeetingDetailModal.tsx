@@ -18,6 +18,9 @@ export default function MeetingDetailModal({ meeting, onClose }: MeetingDetailMo
   const [isSaving, setIsSaving] = useState(false);
   const [startTimeInput, setStartTimeInput] = useState(timeToInputFormat(meeting.startTime));
   const [endTimeInput, setEndTimeInput] = useState(timeToInputFormat(meeting.endTime));
+  
+  // Check if this is a synced meeting
+  const isSyncedMeeting = !!meeting.syncSource;
 
   useEffect(() => {
     setFormData(meeting);
@@ -30,11 +33,21 @@ export default function MeetingDetailModal({ meeting, onClose }: MeetingDetailMo
     setIsSaving(true);
     try {
       // Convert time inputs to display format
-      const meetingToSave = {
-        ...formData,
-        startTime: inputFormatToTime(startTimeInput, settings.timeFormat),
-        endTime: inputFormatToTime(endTimeInput, settings.timeFormat),
-      };
+      // For synced meetings, preserve original time/date fields
+      const meetingToSave = isSyncedMeeting
+        ? {
+            ...meeting, // Start with original meeting to preserve read-only fields
+            notes: formData.notes, // Allow notes to be edited
+            meetingRoomLink: formData.meetingRoomLink, // Allow meeting room link to be edited
+            categoryId: formData.categoryId, // Allow category to be changed
+            requiresAttendance: formData.requiresAttendance, // Allow required attendance to be changed
+            assignedTo: formData.assignedTo, // Allow assigned to be changed
+          }
+        : {
+            ...formData,
+            startTime: inputFormatToTime(startTimeInput, settings.timeFormat),
+            endTime: inputFormatToTime(endTimeInput, settings.timeFormat),
+          };
       await saveMeeting(meetingToSave);
       const action = meeting.id > 0 ? 'updated' : 'created';
       showToast(`Meeting "${meetingToSave.name}" ${action} successfully`, 'success');
@@ -97,8 +110,14 @@ export default function MeetingDetailModal({ meeting, onClose }: MeetingDetailMo
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                disabled={isSyncedMeeting}
+                className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
+                  isSyncedMeeting ? 'opacity-60 cursor-not-allowed' : ''
+                }`}
               />
+              {isSyncedMeeting && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Name cannot be changed for synced meetings</p>
+              )}
             </div>
 
             <div>
@@ -124,22 +143,26 @@ export default function MeetingDetailModal({ meeting, onClose }: MeetingDetailMo
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Days *
               </label>
-              <div className="flex flex-wrap gap-2">
+              <div className={`flex flex-wrap gap-2 ${isSyncedMeeting ? 'opacity-60' : ''}`}>
                 {DAYS_OF_WEEK.map((day) => (
                   <button
                     key={day}
                     type="button"
-                    onClick={() => toggleDay(day)}
+                    onClick={() => !isSyncedMeeting && toggleDay(day)}
+                    disabled={isSyncedMeeting}
                     className={`px-4 py-2 rounded-lg border transition-colors ${
                       formData.days.includes(day)
                         ? 'bg-primary text-white border-primary'
                         : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
-                    }`}
+                    } ${isSyncedMeeting ? 'cursor-not-allowed' : ''}`}
                   >
                     {day}
                   </button>
                 ))}
               </div>
+              {isSyncedMeeting && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Days cannot be changed for synced meetings</p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -152,13 +175,18 @@ export default function MeetingDetailModal({ meeting, onClose }: MeetingDetailMo
                   required
                   value={startTimeInput}
                   onChange={(e) => {
-                    setStartTimeInput(e.target.value);
-                    setFormData({
-                      ...formData,
-                      startTime: inputFormatToTime(e.target.value, settings.timeFormat),
-                    });
+                    if (!isSyncedMeeting) {
+                      setStartTimeInput(e.target.value);
+                      setFormData({
+                        ...formData,
+                        startTime: inputFormatToTime(e.target.value, settings.timeFormat),
+                      });
+                    }
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  disabled={isSyncedMeeting}
+                  className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
+                    isSyncedMeeting ? 'opacity-60 cursor-not-allowed' : ''
+                  }`}
                 />
               </div>
               <div>
@@ -170,13 +198,18 @@ export default function MeetingDetailModal({ meeting, onClose }: MeetingDetailMo
                   required
                   value={endTimeInput}
                   onChange={(e) => {
-                    setEndTimeInput(e.target.value);
-                    setFormData({
-                      ...formData,
-                      endTime: inputFormatToTime(e.target.value, settings.timeFormat),
-                    });
+                    if (!isSyncedMeeting) {
+                      setEndTimeInput(e.target.value);
+                      setFormData({
+                        ...formData,
+                        endTime: inputFormatToTime(e.target.value, settings.timeFormat),
+                      });
+                    }
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  disabled={isSyncedMeeting}
+                  className={`w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 ${
+                    isSyncedMeeting ? 'opacity-60 cursor-not-allowed' : ''
+                  }`}
                 />
               </div>
             </div>
@@ -220,8 +253,48 @@ export default function MeetingDetailModal({ meeting, onClose }: MeetingDetailMo
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                placeholder={isSyncedMeeting ? "Add notes for this synced meeting..." : ""}
               />
             </div>
+
+            {/* Meeting Room / Video Chat Link - editable for synced meetings */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Meeting Room / Video Chat Link
+              </label>
+              <input
+                type="url"
+                value={formData.meetingRoomLink || ''}
+                onChange={(e) => setFormData({ ...formData, meetingRoomLink: e.target.value })}
+                placeholder="https://zoom.us/j/... or https://teams.microsoft.com/..."
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              />
+              {isSyncedMeeting && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Add a meeting room or video chat link for this synced meeting</p>
+              )}
+            </div>
+
+            {/* Imported Attendees - read-only for synced meetings */}
+            {isSyncedMeeting && formData.importedAttendees && formData.importedAttendees.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Imported Attendees (from {formData.syncSource} calendar)
+                </label>
+                <div className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                  <div className="flex flex-wrap gap-2">
+                    {formData.importedAttendees.map((attendee, idx) => (
+                      <span
+                        key={idx}
+                        className="text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 px-2 py-1 rounded"
+                      >
+                        {attendee}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Attendees cannot be changed for synced meetings</p>
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
