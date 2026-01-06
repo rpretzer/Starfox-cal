@@ -9,6 +9,15 @@ build/
 *.lock
 *.log
 
+# Node.js / React
+node_modules/
+dist/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
 # Android
 **/android/gradle-wrapper.jar
 **/android/.gradle
@@ -36,3 +45,11 @@ build/
 **/ios/.vagrant/
 **/ios/.DS_Store
 **/ios/Pods/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
