@@ -66,14 +66,40 @@ class StorageService {
       if (view) this.currentView = view as ViewType;
 
       // Initialize default data if empty
-      const categories = await this.getAllCategories();
-      if (categories.length === 0) {
-        await this.initDefaultCategories();
+      try {
+        const categories = await this.getAllCategories();
+        if (categories.length === 0) {
+          console.log('No categories found, initializing defaults...');
+          await this.initDefaultCategories();
+        } else {
+          console.log(`Found ${categories.length} existing categories`);
+        }
+      } catch (error) {
+        console.warn('Error loading categories:', error);
+        // Try to initialize defaults anyway
+        try {
+          await this.initDefaultCategories();
+        } catch (initError) {
+          console.error('Failed to initialize default categories:', initError);
+        }
       }
 
-      const meetings = await this.getAllMeetings();
-      if (meetings.length === 0) {
-        await this.initDefaultMeetings();
+      try {
+        const meetings = await this.getAllMeetings();
+        if (meetings.length === 0) {
+          console.log('No meetings found, initializing defaults...');
+          await this.initDefaultMeetings();
+        } else {
+          console.log(`Found ${meetings.length} existing meetings`);
+        }
+      } catch (error) {
+        console.warn('Error loading meetings:', error);
+        // Try to initialize defaults anyway
+        try {
+          await this.initDefaultMeetings();
+        } catch (initError) {
+          console.error('Failed to initialize default meetings:', initError);
+        }
       }
     } catch (error) {
       console.error('Storage initialization error:', error);

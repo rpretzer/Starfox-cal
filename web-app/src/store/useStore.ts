@@ -68,33 +68,47 @@ export const useStore = create<AppState>((set, get) => ({
         // Continue with defaults instead of failing completely
       }
       
-      // Load data with individual timeouts
+      // Load data with individual timeouts - increased timeout for data loading
       const loadData = async () => {
-        const [meetings, categories, currentView, currentWeekType, settings] = await Promise.allSettled([
+        const [meetingsResult, categoriesResult, currentViewResult, currentWeekTypeResult, settingsResult] = await Promise.allSettled([
           Promise.race([
             storageAdapter.getAllMeetings(),
-            new Promise<Meeting[]>((resolve) => setTimeout(() => resolve([]), 2000))
+            new Promise<Meeting[]>((resolve) => setTimeout(() => {
+              console.warn('getAllMeetings timeout, using empty array');
+              resolve([]);
+            }, 5000)) // Increased to 5 seconds
           ]),
           Promise.race([
             storageAdapter.getAllCategories(),
-            new Promise<Category[]>((resolve) => setTimeout(() => resolve([]), 2000))
+            new Promise<Category[]>((resolve) => setTimeout(() => {
+              console.warn('getAllCategories timeout, using empty array');
+              resolve([]);
+            }, 5000)) // Increased to 5 seconds
           ]),
           Promise.resolve(storageAdapter.getCurrentView()),
           Promise.resolve(storageAdapter.getCurrentWeekType()),
           Promise.race([
             storageAdapter.getSettings(),
-            new Promise<AppSettings>((resolve) => setTimeout(() => resolve({ monthlyViewEnabled: false, timeFormat: '12h' as const }), 2000))
+            new Promise<AppSettings>((resolve) => setTimeout(() => {
+              console.warn('getSettings timeout, using defaults');
+              resolve({ monthlyViewEnabled: false, timeFormat: '12h' as const });
+            }, 5000)) // Increased to 5 seconds
           ]),
         ]);
 
         const defaultSettings: AppSettings = { monthlyViewEnabled: false, timeFormat: '12h' };
         
+        const meetings = meetingsResult.status === 'fulfilled' ? meetingsResult.value : [];
+        const categories = categoriesResult.status === 'fulfilled' ? categoriesResult.value : [];
+        
+        console.log(`Loaded ${meetings.length} meetings and ${categories.length} categories`);
+        
         return {
-          meetings: meetings.status === 'fulfilled' ? meetings.value : [],
-          categories: categories.status === 'fulfilled' ? categories.value : [],
-          currentView: currentView.status === 'fulfilled' ? currentView.value : ('weekly' as ViewType),
-          currentWeekType: currentWeekType.status === 'fulfilled' ? currentWeekType.value : ('A' as WeekTypeFilter),
-          settings: settings.status === 'fulfilled' ? settings.value : defaultSettings,
+          meetings,
+          categories,
+          currentView: currentViewResult.status === 'fulfilled' ? currentViewResult.value : ('weekly' as ViewType),
+          currentWeekType: currentWeekTypeResult.status === 'fulfilled' ? currentWeekTypeResult.value : ('A' as WeekTypeFilter),
+          settings: settingsResult.status === 'fulfilled' ? settingsResult.value : defaultSettings,
         };
       };
 
@@ -130,13 +144,25 @@ export const useStore = create<AppState>((set, get) => ({
   },
 
   setCurrentView: async (view: ViewType) => {
-    await storageAdapter.setCurrentView(view);
+    // Update state immediately for responsive UI
     set({ currentView: view });
+    // Persist to storage in background (don't block on errors)
+    try {
+      await storageAdapter.setCurrentView(view);
+    } catch (error) {
+      console.warn('Failed to persist view change:', error);
+    }
   },
 
   setCurrentWeekType: async (weekType: WeekTypeFilter) => {
-    await storageAdapter.setCurrentWeekType(weekType);
+    // Update state immediately for responsive UI
     set({ currentWeekType: weekType });
+    // Persist to storage in background (don't block on errors)
+    try {
+      await storageAdapter.setCurrentWeekType(weekType);
+    } catch (error) {
+      console.warn('Failed to persist week type change:', error);
+    }
   },
 
   setMonthlyViewEnabled: async (enabled: boolean) => {
