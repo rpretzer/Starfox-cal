@@ -39,27 +39,68 @@ function App() {
           let expiresIn: number;
 
           if (pendingConfig.provider === 'google') {
-            if (!pendingConfig.googleClientId || !pendingConfig.googleClientSecret) {
-              throw new Error('Google OAuth credentials not found');
+            // Try PKCE first (if codeVerifier exists), then fall back to client secret
+            if (pendingConfig.codeVerifier) {
+              const tokens = await exchangeGoogleCode(
+                code,
+                redirectUri,
+                pendingConfig.codeVerifier,
+                pendingConfig.googleClientId
+              );
+              accessToken = tokens.accessToken;
+              refreshToken = tokens.refreshToken;
+              expiresIn = tokens.expiresIn;
+            } else if (pendingConfig.googleClientId && pendingConfig.googleClientSecret) {
+              const tokens = await exchangeGoogleCode(
+                code,
+                redirectUri,
+                undefined,
+                pendingConfig.googleClientId,
+                pendingConfig.googleClientSecret
+              );
+              accessToken = tokens.accessToken;
+              refreshToken = tokens.refreshToken;
+              expiresIn = tokens.expiresIn;
+            } else {
+              throw new Error('Google OAuth credentials not found. Please use sign-in button or enter Client ID/Secret in Advanced setup.');
             }
-            const tokens = await exchangeGoogleCode(
-              code,
-              pendingConfig.googleClientId,
-              pendingConfig.googleClientSecret,
-              redirectUri
-            );
-            accessToken = tokens.accessToken;
-            refreshToken = tokens.refreshToken;
-            expiresIn = tokens.expiresIn;
           } else if (pendingConfig.provider === 'outlook') {
-            if (!pendingConfig.outlookClientId || !pendingConfig.outlookClientSecret) {
-              throw new Error('Outlook OAuth credentials not found');
+            // Try PKCE first, then fall back to client secret
+            if (pendingConfig.codeVerifier) {
+              const tokens = await exchangeOutlookCode(
+                code,
+                redirectUri,
+                pendingConfig.codeVerifier,
+                pendingConfig.outlookClientId
+              );
+              accessToken = tokens.accessToken;
+              refreshToken = tokens.refreshToken;
+              expiresIn = tokens.expiresIn;
+            } else if (pendingConfig.outlookClientId && pendingConfig.outlookClientSecret) {
+              const tokens = await exchangeOutlookCode(
+                code,
+                redirectUri,
+                undefined,
+                pendingConfig.outlookClientId,
+                pendingConfig.outlookClientSecret
+              );
+              accessToken = tokens.accessToken;
+              refreshToken = tokens.refreshToken;
+              expiresIn = tokens.expiresIn;
+            } else {
+              throw new Error('Outlook OAuth credentials not found. Please use sign-in button or enter Client ID/Secret in Advanced setup.');
             }
-            const tokens = await exchangeOutlookCode(
+          } else if (pendingConfig.provider === 'apple') {
+            if (!pendingConfig.appleClientId || !pendingConfig.appleClientSecret) {
+              throw new Error('Apple OAuth credentials not found. Apple Sign In requires manual setup with Client ID and Secret.');
+            }
+            // Import exchangeAppleCode
+            const calendarSync = await import('./services/calendarSync');
+            const tokens = await calendarSync.exchangeAppleCode(
               code,
-              pendingConfig.outlookClientId,
-              pendingConfig.outlookClientSecret,
-              redirectUri
+              redirectUri,
+              pendingConfig.appleClientId,
+              pendingConfig.appleClientSecret
             );
             accessToken = tokens.accessToken;
             refreshToken = tokens.refreshToken;
@@ -72,17 +113,22 @@ function App() {
           const expiresAt = new Date();
           expiresAt.setSeconds(expiresAt.getSeconds() + expiresIn);
 
-          const config = {
+          const config: any = {
             id: `${pendingConfig.provider}-${pendingConfig.name}`,
             provider: pendingConfig.provider,
             name: pendingConfig.name,
             enabled: true,
-            googleCalendarId: pendingConfig.googleCalendarId,
-            outlookCalendarId: pendingConfig.outlookCalendarId,
             accessToken,
             refreshToken,
             expiresAt: expiresAt.toISOString(),
           };
+
+          // Add provider-specific fields
+          if (pendingConfig.provider === 'google') {
+            config.googleCalendarId = pendingConfig.googleCalendarId || 'primary';
+          } else if (pendingConfig.provider === 'outlook') {
+            config.outlookCalendarId = pendingConfig.outlookCalendarId || 'primary';
+          }
 
           await saveSyncConfig(config);
           sessionStorage.removeItem('pendingSyncConfig');

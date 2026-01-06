@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { Category, MeetingSeries, WeekType, CalendarSyncConfig, CalendarProvider } from '../types';
-import { syncCalendar, getGoogleAuthUrl, getOutlookAuthUrl } from '../services/calendarSync';
+import { syncCalendar, getGoogleAuthUrl, getOutlookAuthUrl, getAppleAuthUrl } from '../services/calendarSync';
 import { getAvailableTimezones, getTimezoneDisplayName, getCurrentTimezone, timeToInputFormat, inputFormatToTime } from '../utils/timeUtils';
 
 interface SettingsScreenProps {
@@ -41,6 +41,8 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
   const [selectedProvider, setSelectedProvider] = useState<CalendarProvider | null>(null);
   const [syncFormData, setSyncFormData] = useState<Partial<CalendarSyncConfig>>({});
   const [syncing, setSyncing] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [connectingProvider, setConnectingProvider] = useState<CalendarProvider | null>(null);
 
   const handleAddCategory = () => {
     if (!newCategoryName.trim()) return;
@@ -675,42 +677,212 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                 </div>
               ) : (
                 <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Calendar Provider
-                    </label>
-                    <select
-                      value={selectedProvider || ''}
-                      onChange={(e) => {
-                        setSelectedProvider(e.target.value as CalendarProvider);
-                        setSyncFormData({ provider: e.target.value as CalendarProvider });
-                      }}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                    >
-                      <option value="">Select a provider</option>
-                      <option value="google">Google Calendar</option>
-                      <option value="outlook">Outlook / Microsoft 365</option>
-                      <option value="ical">iCal / ICS File</option>
-                      <option value="apple">Apple Calendar (ICS URL)</option>
-                    </select>
-                  </div>
-
-                  {selectedProvider && (
+                  {/* Quick Sign-In Buttons */}
+                  {!showAdvanced && (
                     <>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Sync Name
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                          Connect Calendar
                         </label>
-                        <input
-                          type="text"
-                          value={syncFormData.name || ''}
-                          onChange={(e) => setSyncFormData({ ...syncFormData, name: e.target.value })}
-                          placeholder="e.g., Work Calendar"
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                        />
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                          Sign in with your account to sync calendars, or use an ICS file URL.
+                        </p>
+                        
+                        <div className="space-y-3">
+                          {/* Google Sign In */}
+                          <button
+                            onClick={async () => {
+                              const name = prompt('Enter a name for this calendar sync (e.g., "Work Calendar"):');
+                              if (!name) return;
+                              setSyncFormData({ ...syncFormData, name, provider: 'google' });
+                              setConnectingProvider('google');
+                              try {
+                                const redirectUri = `${window.location.origin}${window.location.pathname}`;
+                                const { url, codeVerifier } = await getGoogleAuthUrl(redirectUri, true);
+                                
+                                sessionStorage.setItem('pendingSyncConfig', JSON.stringify({
+                                  name,
+                                  provider: 'google',
+                                  codeVerifier,
+                                }));
+                                
+                                window.location.href = url;
+                              } catch (error) {
+                                alert(`Failed to start Google sign-in: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                                setConnectingProvider(null);
+                              }
+                            }}
+                            disabled={connectingProvider !== null}
+                            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors disabled:opacity-50"
+                          >
+                            <svg className="w-5 h-5" viewBox="0 0 24 24">
+                              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                            </svg>
+                            <span className="font-medium text-gray-900 dark:text-gray-100">
+                              {connectingProvider === 'google' ? 'Connecting...' : 'Sign in with Google'}
+                            </span>
+                          </button>
+
+                          {/* Microsoft Sign In */}
+                          <button
+                            onClick={async () => {
+                              const name = prompt('Enter a name for this calendar sync (e.g., "Work Calendar"):');
+                              if (!name) return;
+                              setSyncFormData({ ...syncFormData, name, provider: 'outlook' });
+                              setConnectingProvider('outlook');
+                              try {
+                                const redirectUri = `${window.location.origin}${window.location.pathname}`;
+                                const { url, codeVerifier } = await getOutlookAuthUrl(redirectUri, true);
+                                
+                                sessionStorage.setItem('pendingSyncConfig', JSON.stringify({
+                                  name,
+                                  provider: 'outlook',
+                                  codeVerifier,
+                                }));
+                                
+                                window.location.href = url;
+                              } catch (error) {
+                                alert(`Failed to start Microsoft sign-in: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                                setConnectingProvider(null);
+                              }
+                            }}
+                            disabled={connectingProvider !== null}
+                            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-500 dark:hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors disabled:opacity-50"
+                          >
+                            <svg className="w-5 h-5" viewBox="0 0 23 23" fill="none">
+                              <path d="M11.4 11.4H0V0h11.4v11.4z" fill="#F25022"/>
+                              <path d="M23 11.4H11.6V0H23v11.4z" fill="#7FBA00"/>
+                              <path d="M11.4 23H0V11.6h11.4V23z" fill="#00A4EF"/>
+                              <path d="M23 23H11.6V11.6H23V23z" fill="#FFB900"/>
+                            </svg>
+                            <span className="font-medium text-gray-900 dark:text-gray-100">
+                              {connectingProvider === 'outlook' ? 'Connecting...' : 'Sign in with Microsoft'}
+                            </span>
+                          </button>
+
+                          {/* Apple Sign In */}
+                          <button
+                            onClick={async () => {
+                              const name = prompt('Enter a name for this calendar sync (e.g., "Personal Calendar"):');
+                              if (!name) return;
+                              setSyncFormData({ ...syncFormData, name, provider: 'apple' });
+                              setConnectingProvider('apple');
+                              try {
+                                const redirectUri = `${window.location.origin}${window.location.pathname}`;
+                                const { url, state } = await getAppleAuthUrl(redirectUri);
+                                
+                                sessionStorage.setItem('pendingSyncConfig', JSON.stringify({
+                                  name,
+                                  provider: 'apple',
+                                  appleState: state,
+                                }));
+                                
+                                window.location.href = url;
+                              } catch (error) {
+                                alert(`Failed to start Apple sign-in: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                                setConnectingProvider(null);
+                              }
+                            }}
+                            disabled={connectingProvider !== null}
+                            className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-black dark:bg-gray-900 border-2 border-gray-800 dark:border-gray-700 rounded-lg hover:border-gray-600 dark:hover:border-gray-500 transition-colors disabled:opacity-50"
+                          >
+                            <svg className="w-5 h-5" fill="white" viewBox="0 0 24 24">
+                              <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+                            </svg>
+                            <span className="font-medium text-white">
+                              {connectingProvider === 'apple' ? 'Connecting...' : 'Sign in with Apple'}
+                            </span>
+                          </button>
+
+                          {/* ICS File Option */}
+                          <div className="pt-2 border-t border-gray-300 dark:border-gray-600">
+                            <button
+                              onClick={() => {
+                                setSelectedProvider('ical');
+                                setShowAdvanced(true);
+                              }}
+                              className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                            >
+                              <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                              <span className="font-medium text-gray-900 dark:text-gray-100">
+                                Add ICS File URL
+                              </span>
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="pt-3 mt-3 border-t border-gray-300 dark:border-gray-600">
+                          <button
+                            onClick={() => setShowAdvanced(true)}
+                            className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                          >
+                            Advanced: Manual Setup →
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Advanced Manual Setup */}
+                  {showAdvanced && (
+                    <>
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Advanced Setup</h4>
+                        <button
+                          onClick={() => {
+                            setShowAdvanced(false);
+                            setSelectedProvider(null);
+                            setSyncFormData({});
+                          }}
+                          className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                        >
+                          ← Back to Quick Connect
+                        </button>
                       </div>
 
-                      {selectedProvider === 'google' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Calendar Provider
+                        </label>
+                        <select
+                          value={selectedProvider || ''}
+                          onChange={(e) => {
+                            setSelectedProvider(e.target.value as CalendarProvider);
+                            setSyncFormData({ provider: e.target.value as CalendarProvider });
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                        >
+                          <option value="">Select a provider</option>
+                          <option value="google">Google Calendar</option>
+                          <option value="outlook">Outlook / Microsoft 365</option>
+                          <option value="ical">iCal / ICS File</option>
+                          <option value="apple">Apple Calendar (ICS URL)</option>
+                        </select>
+                      </div>
+
+                      {selectedProvider && (
+                        <>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                              Sync Name
+                            </label>
+                            <input
+                              type="text"
+                              value={syncFormData.name || ''}
+                              onChange={(e) => setSyncFormData({ ...syncFormData, name: e.target.value })}
+                              placeholder="e.g., Work Calendar"
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {selectedProvider === 'google' && showAdvanced && (
                         <div className="space-y-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded">
                           <p className="text-sm text-gray-700 dark:text-gray-300">
                             To sync with Google Calendar, you'll need to:
@@ -761,15 +933,15 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                                 alert('Please enter Client ID and Calendar ID');
                                 return;
                               }
-                              const redirectUri = `${window.location.origin}/oauth/callback`;
-                              const authUrl = getGoogleAuthUrl(syncFormData.googleClientId!, redirectUri);
+                              const redirectUri = `${window.location.origin}${window.location.pathname}`;
+                              const { url } = await getGoogleAuthUrl(redirectUri, false, syncFormData.googleClientId);
                               // Store config temporarily
                               sessionStorage.setItem('pendingSyncConfig', JSON.stringify({
                                 ...syncFormData,
                                 provider: 'google',
                                 name: syncFormData.name || 'Google Calendar',
                               }));
-                              window.location.href = authUrl;
+                              window.location.href = url;
                             }}
                             className="w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors"
                           >
@@ -778,7 +950,7 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                         </div>
                       )}
 
-                      {selectedProvider === 'outlook' && (
+                      {selectedProvider === 'outlook' && showAdvanced && (
                         <div className="space-y-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded">
                           <p className="text-sm text-gray-700 dark:text-gray-300">
                             To sync with Outlook, you'll need to:
@@ -816,14 +988,14 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                                 alert('Please enter Client ID');
                                 return;
                               }
-                              const redirectUri = `${window.location.origin}/oauth/callback`;
-                              const authUrl = getOutlookAuthUrl(syncFormData.outlookClientId!, redirectUri);
+                              const redirectUri = `${window.location.origin}${window.location.pathname}`;
+                              const { url } = await getOutlookAuthUrl(redirectUri, false, syncFormData.outlookClientId);
                               sessionStorage.setItem('pendingSyncConfig', JSON.stringify({
                                 ...syncFormData,
                                 provider: 'outlook',
                                 name: syncFormData.name || 'Outlook Calendar',
                               }));
-                              window.location.href = authUrl;
+                              window.location.href = url;
                             }}
                             className="w-full bg-primary text-white px-4 py-2 rounded-lg hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors"
                           >
@@ -832,7 +1004,7 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                         </div>
                       )}
 
-                      {(selectedProvider === 'ical' || selectedProvider === 'apple') && (
+                      {(selectedProvider === 'ical' || selectedProvider === 'apple') && showAdvanced && (
                         <div className="space-y-3">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">

@@ -253,60 +253,225 @@ export async function syncCalendar(config: CalendarSyncConfig): Promise<{ meetin
   }
 }
 
-// OAuth helpers
-export function getGoogleAuthUrl(clientId: string, redirectUri: string): string {
+// PKCE helpers for OAuth2 public clients
+function generateCodeVerifier(): string {
+  const array = new Uint8Array(32);
+  crypto.getRandomValues(array);
+  return btoa(String.fromCharCode(...array))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+}
+
+async function generateCodeChallenge(verifier: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(verifier);
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  return btoa(String.fromCharCode(...new Uint8Array(digest)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+}
+
+// OAuth helpers with PKCE support
+export async function getGoogleAuthUrl(redirectUri: string, usePKCE: boolean = true, clientId?: string): Promise<{ url: string; codeVerifier?: string }> {
   const scope = 'https://www.googleapis.com/auth/calendar.readonly';
-  const params = new URLSearchParams({
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    response_type: 'code',
-    scope,
-    access_type: 'offline',
-    prompt: 'consent',
-  });
-  return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+  
+  // Use provided client ID or placeholder
+  const finalClientId = clientId || 'YOUR_GOOGLE_CLIENT_ID';
+  
+  if (usePKCE) {
+    const codeVerifier = generateCodeVerifier();
+    const codeChallenge = await generateCodeChallenge(codeVerifier);
+    
+    const params = new URLSearchParams({
+      client_id: finalClientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope,
+      code_challenge: codeChallenge,
+      code_challenge_method: 'S256',
+      access_type: 'offline',
+      prompt: 'consent',
+    });
+    
+    return {
+      url: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`,
+      codeVerifier,
+    };
+  } else {
+    if (!clientId || finalClientId === 'YOUR_GOOGLE_CLIENT_ID') {
+      throw new Error('Client ID required for non-PKCE flow');
+    }
+    const params = new URLSearchParams({
+      client_id: finalClientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope,
+      access_type: 'offline',
+      prompt: 'consent',
+    });
+    return { url: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}` };
+  }
 }
 
-export function getOutlookAuthUrl(clientId: string, redirectUri: string): string {
+export async function getOutlookAuthUrl(redirectUri: string, usePKCE: boolean = true, clientId?: string): Promise<{ url: string; codeVerifier?: string }> {
   const scope = 'https://graph.microsoft.com/Calendars.Read';
+  const finalClientId = clientId || 'YOUR_MICROSOFT_CLIENT_ID'; // This should be configured or use a default
+  
+  if (usePKCE) {
+    const codeVerifier = generateCodeVerifier();
+    const codeChallenge = await generateCodeChallenge(codeVerifier);
+    
+    const params = new URLSearchParams({
+      client_id: finalClientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope,
+      code_challenge: codeChallenge,
+      code_challenge_method: 'S256',
+    });
+    
+    return {
+      url: `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${params.toString()}`,
+      codeVerifier,
+    };
+  } else {
+    if (!clientId || finalClientId === 'YOUR_MICROSOFT_CLIENT_ID') {
+      throw new Error('Client ID required for non-PKCE flow');
+    }
+    const params = new URLSearchParams({
+      client_id: finalClientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope,
+    });
+    return { url: `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${params.toString()}` };
+  }
+}
+
+// Apple Sign In (uses OAuth2)
+export async function getAppleAuthUrl(redirectUri: string): Promise<{ url: string; state: string }> {
+  const clientId = 'YOUR_APPLE_CLIENT_ID';
+  const state = generateCodeVerifier(); // Use as state for CSRF protection
+  
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope,
+    scope: 'email',
+    response_mode: 'form_post',
+    state,
   });
-  return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${params.toString()}`;
+  
+  return {
+    url: `https://appleid.apple.com/auth/authorize?${params.toString()}`,
+    state,
+  };
 }
 
-// Exchange authorization code for token (Google)
-export async function exchangeGoogleCode(code: string, clientId: string, clientSecret: string, redirectUri: string): Promise<{ accessToken: string; refreshToken: string; expiresIn: number }> {
+// Exchange authorization code for token (Google) - with PKCE support
+export async function exchangeGoogleCode(
+  code: string,
+  redirectUri: string,
+  codeVerifier?: string,
+  clientId?: string,
+  clientSecret?: string
+): Promise<{ accessToken: string; refreshToken: string; expiresIn: number }> {
+  const body: Record<string, string> = {
+    code,
+    redirect_uri: redirectUri,
+    grant_type: 'authorization_code',
+  };
+
+  if (codeVerifier) {
+    // PKCE flow (no client secret needed)
+    body.code_verifier = codeVerifier;
+    if (clientId) {
+      body.client_id = clientId;
+    }
+  } else if (clientId && clientSecret) {
+    // Traditional flow with client secret
+    body.client_id = clientId;
+    body.client_secret = clientSecret;
+  } else {
+    throw new Error('Either codeVerifier or clientId/clientSecret required');
+  }
+
   const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      code,
-      client_id: clientId,
-      client_secret: clientSecret,
-      redirect_uri: redirectUri,
-      grant_type: 'authorization_code',
-    }),
+    body: new URLSearchParams(body),
   });
 
   if (!response.ok) {
-    throw new Error('Failed to exchange authorization code');
+    const error = await response.text();
+    throw new Error(`Failed to exchange authorization code: ${error}`);
   }
 
   const data = await response.json();
   return {
     accessToken: data.access_token,
-    refreshToken: data.refresh_token,
+    refreshToken: data.refresh_token || '',
     expiresIn: data.expires_in,
   };
 }
 
-// Exchange authorization code for token (Outlook)
-export async function exchangeOutlookCode(code: string, clientId: string, clientSecret: string, redirectUri: string): Promise<{ accessToken: string; refreshToken: string; expiresIn: number }> {
+// Exchange authorization code for token (Outlook) - with PKCE support
+export async function exchangeOutlookCode(
+  code: string,
+  redirectUri: string,
+  codeVerifier?: string,
+  clientId?: string,
+  clientSecret?: string
+): Promise<{ accessToken: string; refreshToken: string; expiresIn: number }> {
+  const body: Record<string, string> = {
+    code,
+    redirect_uri: redirectUri,
+    grant_type: 'authorization_code',
+  };
+
+  if (codeVerifier) {
+    // PKCE flow
+    body.code_verifier = codeVerifier;
+    if (clientId) {
+      body.client_id = clientId;
+    }
+  } else if (clientId && clientSecret) {
+    // Traditional flow
+    body.client_id = clientId;
+    body.client_secret = clientSecret;
+  } else {
+    throw new Error('Either codeVerifier or clientId/clientSecret required');
+  }
+
   const response = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams(body),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to exchange authorization code: ${error}`);
+  }
+
+  const data = await response.json();
+  return {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token || '',
+    expiresIn: data.expires_in,
+  };
+}
+
+// Exchange authorization code for token (Apple)
+export async function exchangeAppleCode(
+  code: string,
+  redirectUri: string,
+  clientId: string,
+  clientSecret: string
+): Promise<{ accessToken: string; refreshToken: string; expiresIn: number }> {
+  const response = await fetch('https://appleid.apple.com/auth/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
@@ -319,13 +484,14 @@ export async function exchangeOutlookCode(code: string, clientId: string, client
   });
 
   if (!response.ok) {
-    throw new Error('Failed to exchange authorization code');
+    const error = await response.text();
+    throw new Error(`Failed to exchange authorization code: ${error}`);
   }
 
   const data = await response.json();
   return {
     accessToken: data.access_token,
-    refreshToken: data.refresh_token || '', // Outlook may not return refresh token
+    refreshToken: data.refresh_token || '',
     expiresIn: data.expires_in,
   };
 }
