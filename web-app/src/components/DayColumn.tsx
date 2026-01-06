@@ -13,8 +13,16 @@ export default function DayColumn({ day, onMeetingClick }: DayColumnProps) {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
 
   useEffect(() => {
-    getMeetingsForDay(day).then(setMeetings);
-  }, [day, getMeetingsForDay, currentWeekType]);
+    let cancelled = false;
+    getMeetingsForDay(day).then((result) => {
+      if (!cancelled) {
+        setMeetings(result);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [day, currentWeekType]); // Removed getMeetingsForDay from deps - Zustand functions are stable
 
   return (
     <div className="flex-shrink-0 w-64 bg-white rounded-lg shadow-sm border border-gray-200 p-4">

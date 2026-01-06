@@ -8,8 +8,10 @@ function App() {
   const { init, isLoading, error } = useStore();
 
   useEffect(() => {
-    init();
-  }, [init]);
+    init().catch((err) => {
+      console.error('Failed to initialize app:', err);
+    });
+  }, []); // Empty deps - init should only run once on mount
 
   if (isLoading) {
     return <LoadingScreen />;
