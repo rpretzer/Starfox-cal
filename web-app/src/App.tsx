@@ -9,7 +9,7 @@ import { exchangeGoogleCode, exchangeOutlookCode } from './services/calendarSync
 import { authService } from './services/auth';
 
 function App() {
-  const { init, isLoading, saveSyncConfig } = useStore();
+  const { init, isLoading, saveSyncConfig, subscribeToRealtimeUpdates, refreshAll } = useStore();
   const [oauthProcessing, setOauthProcessing] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const { toasts, showToast, removeToast } = useToast();
@@ -220,6 +220,41 @@ function App() {
       console.error('Failed to initialize app:', err);
     });
   }, [init]);
+
+  // Subscribe to real-time updates for cross-device/tab sync
+  useEffect(() => {
+    const subscription = subscribeToRealtimeUpdates();
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [subscribeToRealtimeUpdates]);
+
+  // Sync-on-focus: refresh data when user returns to tab/app
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('Tab became visible, refreshing data...');
+        refreshAll().catch((err) => {
+          console.warn('Failed to refresh on visibility change:', err);
+        });
+      }
+    };
+
+    const handleFocus = () => {
+      console.log('Window focused, refreshing data...');
+      refreshAll().catch((err) => {
+        console.warn('Failed to refresh on focus:', err);
+      });
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [refreshAll]);
 
   // Handle OAuth callback from Supabase
   useEffect(() => {

@@ -255,45 +255,69 @@ class StorageAdapter {
     return (storageService as any).deleteSyncConfig(id);
   }
 
-  // View/WeekType (IndexedDB only - stored locally)
-  getCurrentView(): ViewType {
-    if (!this.useCloud) {
-      return (storageService as any).getCurrentView();
+  // View/WeekType - synced to both local and cloud storage
+  async getCurrentView(): Promise<ViewType> {
+    if (this.useCloud) {
+      try {
+        const view = await supabaseStorageService.getCurrentView();
+        if (view) return view as ViewType;
+      } catch (error) {
+        console.warn('Failed to get view from cloud:', error);
+      }
     }
-    return 'weekly'; // Default for cloud
+    // Fall back to local storage
+    return (storageService as any).getCurrentView() || 'weekly';
   }
 
-  getCurrentWeekType(): WeekTypeFilter {
-    if (!this.useCloud) {
-      return (storageService as any).getCurrentWeekType();
+  async getCurrentWeekType(): Promise<WeekTypeFilter> {
+    if (this.useCloud) {
+      try {
+        const weekType = await supabaseStorageService.getCurrentWeekType();
+        if (weekType) return weekType as WeekTypeFilter;
+      } catch (error) {
+        console.warn('Failed to get week type from cloud:', error);
+      }
     }
-    return 'A'; // Default for cloud
+    // Fall back to local storage
+    return (storageService as any).getCurrentWeekType() || 'A';
   }
 
   async setCurrentView(view: ViewType): Promise<void> {
-    if (!this.useCloud) {
-      // Ensure storage service is initialized
-      try {
-        await storageService.init();
-      } catch (error) {
-        console.warn('Failed to initialize storage for setCurrentView:', error);
-      }
-      return (storageService as any).setCurrentView(view);
+    // Save to local storage first (for fast access)
+    try {
+      await storageService.init();
+      (storageService as any).setCurrentView(view);
+    } catch (error) {
+      console.warn('Failed to save view to local storage:', error);
     }
-    // For cloud, we could store this in user_settings if needed
+
+    // Also save to cloud if authenticated
+    if (this.useCloud) {
+      try {
+        await supabaseStorageService.setCurrentView(view);
+      } catch (error) {
+        console.warn('Failed to save view to cloud:', error);
+      }
+    }
   }
 
   async setCurrentWeekType(weekType: WeekTypeFilter): Promise<void> {
-    if (!this.useCloud) {
-      // Ensure storage service is initialized
-      try {
-        await storageService.init();
-      } catch (error) {
-        console.warn('Failed to initialize storage for setCurrentWeekType:', error);
-      }
-      return (storageService as any).setCurrentWeekType(weekType);
+    // Save to local storage first (for fast access)
+    try {
+      await storageService.init();
+      (storageService as any).setCurrentWeekType(weekType);
+    } catch (error) {
+      console.warn('Failed to save week type to local storage:', error);
     }
-    // For cloud, we could store this in user_settings if needed
+
+    // Also save to cloud if authenticated
+    if (this.useCloud) {
+      try {
+        await supabaseStorageService.setCurrentWeekType(weekType);
+      } catch (error) {
+        console.warn('Failed to save week type to cloud:', error);
+      }
+    }
   }
 
   // Helper methods (IndexedDB only)

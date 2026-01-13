@@ -306,6 +306,46 @@ class SupabaseStorageService {
     if (error) throw error;
   }
 
+  async getCurrentView(): Promise<string | null> {
+    await this.init();
+    const { data, error } = await supabase
+      .from('user_settings')
+      .select('current_view')
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    return data?.current_view ?? null;
+  }
+
+  async setCurrentView(view: string): Promise<void> {
+    await this.init();
+    const { error } = await supabase
+      .from('user_settings')
+      .upsert({ current_view: view }, { onConflict: 'user_id' });
+
+    if (error) throw error;
+  }
+
+  async getCurrentWeekType(): Promise<string | null> {
+    await this.init();
+    const { data, error } = await supabase
+      .from('user_settings')
+      .select('current_week_type')
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    return data?.current_week_type ?? null;
+  }
+
+  async setCurrentWeekType(weekType: string): Promise<void> {
+    await this.init();
+    const { error } = await supabase
+      .from('user_settings')
+      .upsert({ current_week_type: weekType }, { onConflict: 'user_id' });
+
+    if (error) throw error;
+  }
+
   // ==================== Calendar Sync Configs ====================
 
   async getAllSyncConfigs(): Promise<CalendarSyncConfig[]> {

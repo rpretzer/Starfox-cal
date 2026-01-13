@@ -41,6 +41,8 @@ interface AppState {
   getSyncConfigs: () => Promise<CalendarSyncConfig[]>;
   saveSyncConfig: (config: CalendarSyncConfig & { id: string }) => Promise<void>;
   deleteSyncConfig: (id: string) => Promise<void>;
+  subscribeToRealtimeUpdates: () => { unsubscribe: () => void };
+  refreshAll: () => Promise<void>;
 }
 
 export const useStore = create<AppState>()(
@@ -99,8 +101,8 @@ export const useStore = create<AppState>()(
               resolve([]);
             }, 5000))
           ]),
-          Promise.resolve(storageAdapter.getCurrentView()),
-          Promise.resolve(storageAdapter.getCurrentWeekType()),
+          storageAdapter.getCurrentView(),
+          storageAdapter.getCurrentWeekType(),
           Promise.race([
             storageAdapter.getSettings(),
             new Promise<AppSettings>((resolve) => setTimeout(() => {
@@ -387,6 +389,66 @@ export const useStore = create<AppState>()(
 
   deleteSyncConfig: async (id: string) => {
     await storageAdapter.deleteSyncConfig(id);
+  },
+
+  // Real-time sync: subscribe to changes from other devices/tabs
+  subscribeToRealtimeUpdates: () => {
+    const meetingSub = storageAdapter.subscribeToMeetings((meeting, event) => {
+      set((state) => {
+        if (event === 'DELETE') {
+          return { meetings: state.meetings.filter(m => m.id !== meeting.id) };
+        } else if (event === 'INSERT') {
+          // Only add if not already present
+          if (state.meetings.some(m => m.id === meeting.id)) {
+            return state;
+          }
+          return { meetings: [...state.meetings, meeting] };
+        } else {
+          // UPDATE
+          return { meetings: state.meetings.map(m => m.id === meeting.id ? meeting : m) };
+        }
+      });
+    });
+
+    const categorySub = storageAdapter.subscribeToCategories((category, event) => {
+      set((state) => {
+        if (event === 'DELETE') {
+          return { categories: state.categories.filter(c => c.id !== category.id) };
+        } else if (event === 'INSERT') {
+          // Only add if not already present
+          if (state.categories.some(c => c.id === category.id)) {
+            return state;
+          }
+          return { categories: [...state.categories, category] };
+        } else {
+          // UPDATE
+          return { categories: state.categories.map(c => c.id === category.id ? category : c) };
+        }
+      });
+    });
+
+    return {
+      unsubscribe: () => {
+        meetingSub.unsubscribe();
+        categorySub.unsubscribe();
+      }
+    };
+  },
+
+  // Refresh all data from storage (used for sync-on-focus)
+  refreshAll: async () => {
+    try {
+      const [meetings, categories, settings, currentView, currentWeekType] = await Promise.all([
+        storageAdapter.getAllMeetings(),
+        storageAdapter.getAllCategories(),
+        storageAdapter.getSettings(),
+        storageAdapter.getCurrentView(),
+        storageAdapter.getCurrentWeekType(),
+      ]);
+      set({ meetings, categories, settings, currentView, currentWeekType });
+    } catch (error) {
+      console.warn('Failed to refresh all data:', error);
+    }
   },
     }),
     {
