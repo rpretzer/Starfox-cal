@@ -8,10 +8,18 @@ import { useGlobalToast } from '../hooks/useGlobalToast';
 interface TeamCalendarProps {
   categoryId: string;
   onMeetingClick: (meeting: Meeting) => void;
+  onCreateMeeting?: (day: string, categoryId: string) => void;
+}
+
+interface TeamDayColumnProps {
+  day: string;
+  categoryId: string;
+  onMeetingClick: (meeting: Meeting) => void;
+  onCreateMeeting?: (day: string, categoryId: string) => void;
 }
 
 // Team-specific DayColumn that filters by category
-function TeamDayColumn({ day, categoryId, onMeetingClick }: { day: string; categoryId: string; onMeetingClick: (meeting: Meeting) => void }) {
+function TeamDayColumn({ day, categoryId, onMeetingClick, onCreateMeeting }: TeamDayColumnProps) {
   const { getMeetingsForDay, currentWeekType, moveMeetingToDay, meetings, getMeeting } = useStore();
   const { showToast } = useGlobalToast();
   const [dayMeetings, setDayMeetings] = useState<Meeting[]>([]);
@@ -284,11 +292,22 @@ function TeamDayColumn({ day, categoryId, onMeetingClick }: { day: string; categ
       <h3 className="font-semibold text-gray-800 dark:text-gray-200 mb-3 text-center text-sm">
         {day.substring(0, 3)}
       </h3>
-      <div className="space-y-2 flex-1 overflow-y-auto">
+      <div
+        className="space-y-2 flex-1 overflow-y-auto min-h-[60px] cursor-pointer"
+        onClick={(e) => {
+          // Only trigger if clicking on empty space (not on a meeting card)
+          if (e.target === e.currentTarget && onCreateMeeting) {
+            onCreateMeeting(day, categoryId);
+          }
+        }}
+      >
         {dayMeetings.length === 0 ? (
-          <p className="text-gray-400 dark:text-gray-500 text-xs text-center py-4">
-            {isDragOver ? 'Drop here' : 'No meetings'}
-          </p>
+          <button
+            onClick={() => onCreateMeeting?.(day, categoryId)}
+            className="w-full text-gray-400 dark:text-gray-500 text-xs text-center py-4 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 rounded transition-colors"
+          >
+            {isDragOver ? 'Drop here' : '+ Add meeting'}
+          </button>
         ) : (
           dayMeetings.map((meeting, index) => (
             <div key={meeting.id} data-meeting-id={meeting.id}>
@@ -309,12 +328,24 @@ function TeamDayColumn({ day, categoryId, onMeetingClick }: { day: string; categ
             </div>
           ))
         )}
+        {/* Add meeting button at bottom when there are meetings */}
+        {dayMeetings.length > 0 && onCreateMeeting && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onCreateMeeting(day, categoryId);
+            }}
+            className="w-full text-gray-400 dark:text-gray-500 text-xs text-center py-2 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-700 rounded transition-colors mt-2"
+          >
+            + Add
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
-export default function TeamCalendar({ categoryId, onMeetingClick }: TeamCalendarProps) {
+export default function TeamCalendar({ categoryId, onMeetingClick, onCreateMeeting }: TeamCalendarProps) {
   return (
     <div className="w-full">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3">
@@ -324,6 +355,7 @@ export default function TeamCalendar({ categoryId, onMeetingClick }: TeamCalenda
             day={day}
             categoryId={categoryId}
             onMeetingClick={onMeetingClick}
+            onCreateMeeting={onCreateMeeting}
           />
         ))}
       </div>

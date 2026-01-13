@@ -6,9 +6,10 @@ import ConflictsContainer from './ConflictsContainer';
 
 interface TeamsViewProps {
   onMeetingClick: (meeting: Meeting) => void;
+  onCreateMeeting?: (day: string, categoryId: string) => void;
 }
 
-export default function TeamsView({ onMeetingClick }: TeamsViewProps) {
+export default function TeamsView({ onMeetingClick, onCreateMeeting }: TeamsViewProps) {
   const { categories } = useStore();
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
 
@@ -95,6 +96,7 @@ export default function TeamsView({ onMeetingClick }: TeamsViewProps) {
                 <TeamCalendar
                   categoryId={category.id}
                   onMeetingClick={onMeetingClick}
+                  onCreateMeeting={onCreateMeeting}
                 />
               </div>
             )}

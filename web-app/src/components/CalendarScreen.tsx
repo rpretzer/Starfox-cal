@@ -64,6 +64,23 @@ export default function CalendarScreen() {
     setIsMeetingModalOpen(true);
   };
 
+  const handleCreateMeetingWithDefaults = async (day: string, categoryId: string) => {
+    const newId = await getNextMeetingId();
+    setEditingMeeting({
+      id: newId,
+      name: '',
+      categoryId,
+      days: [day],
+      startTime: '',
+      endTime: '',
+      weekType: 'both' as any,
+      requiresAttendance: '',
+      notes: '',
+      assignedTo: '',
+    });
+    setIsMeetingModalOpen(true);
+  };
+
   const handleCloseModal = () => {
     setIsMeetingModalOpen(false);
     setEditingMeeting(null);
@@ -78,7 +95,7 @@ export default function CalendarScreen() {
       case 'monthly':
         return <MonthlyView onMeetingClick={handleEditMeeting} />;
       case 'teams':
-        return <TeamsView onMeetingClick={handleEditMeeting} />;
+        return <TeamsView onMeetingClick={handleEditMeeting} onCreateMeeting={handleCreateMeetingWithDefaults} />;
       default:
         return <div>Unknown view</div>;
     }
