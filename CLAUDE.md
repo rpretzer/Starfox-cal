@@ -43,11 +43,13 @@ npm run preview      # Preview production build locally
 
 ## Session Goals
 
-This session focuses on three objectives:
+This session focuses on five objectives:
 
 1. **Modernize** — Upgrade dependencies, patterns, and tooling to current best practices
 2. **Local install version** — Support installable PWA (Progressive Web App) for offline-first desktop/mobile use
 3. **Enterprise-level code quality** — Testing, error handling, observability, and maintainability
+4. **Frictionless Microsoft 365 integration** — One-click Outlook/Teams calendar connect (no developer console required)
+5. **Slack bot** — Meeting notifications, daily digests, and conflict alerts posted to Slack channels
 
 All work must also satisfy **accessibility (a11y)** and **evidence-based UI/UX** standards as defined below.
 
@@ -221,6 +223,161 @@ When implementing the installable PWA:
 - **Offline support**: Full functionality using IndexedDB; queue mutations for sync when online
 - **Install prompt**: Custom in-app install banner using `beforeinstallprompt` event
 - **Update flow**: Notify user of new version; apply on next navigation or refresh
+
+---
+
+## Microsoft 365 Integration (Outlook + Teams)
+
+### Current State & Problems
+
+The existing Outlook sync (`services/calendarSync.ts`) requires users to:
+1. Visit Azure Portal and create an app registration
+2. Configure redirect URIs manually
+3. Copy/paste a client ID into a multi-step setup wizard
+
+This is unacceptable friction for non-technical users. The goal is **one-click connect**.
+
+### Target Architecture
+
+#### Pre-registered Multi-Tenant Azure AD App
+- Register a single Azure AD app under the Starfox org with **multi-tenant** support (`/common` endpoint)
+- Client ID shipped as a build-time env var (`VITE_MS_CLIENT_ID`) — not a secret, safe for SPA
+- Users click "Connect Microsoft 365" → redirected to Microsoft login → consent → done
+- No setup wizard steps for Microsoft; no client ID input fields
+
+#### MSAL.js Integration
+- Replace raw `fetch`-based OAuth with **@azure/msal-browser** (Microsoft Authentication Library)
+- Use **PKCE authorization code flow** (recommended for SPAs; implicit flow is deprecated)
+- Silent token refresh via hidden iframe — users stay logged in across sessions
+- Scopes requested:
+  - `Calendars.Read` — read Outlook calendar events
+  - `OnlineMeetings.Read` — read Teams meeting details (join URLs, attendees)
+  - `User.Read` — basic profile for display name / avatar
+  - `Presence.Read` (optional, future) — show availability status
+
+#### Microsoft Graph API Endpoints
+| Feature | Endpoint | Notes |
+|---|---|---|
+| List calendars | `GET /me/calendars` | Let user pick which calendar(s) to sync |
+| Calendar events | `GET /me/calendarView` | Time-range filtered, handles recurrence expansion |
+| Teams meetings | `GET /me/onlineMeetings` | Pull Teams-specific metadata (join URL, lobby settings) |
+| Free/busy | `POST /me/calendar/getSchedule` | Check availability for conflict detection |
+
+#### Event Mapping Enhancements
+- Detect Teams meetings from `onlineMeeting` property on Graph events → auto-set `meetingLinkType: 'teams'` and extract join URL
+- Import attendee response status (accepted/tentative/declined)
+- Preserve organizer info for display
+- Map Graph `sensitivity` field to `publicVisibility`
+- Support recurring event series via `seriesMasterId`
+
+#### Token Management
+- Access tokens held in memory only (MSAL cache in `sessionStorage` with encryption)
+- Refresh tokens managed by MSAL silently — no user action needed
+- On token expiry: silent refresh → if fails, show non-blocking "Reconnect" prompt
+- On logout/disconnect: revoke tokens and clear MSAL cache
+
+#### Sync Behavior
+- **Initial sync**: Pull 30 days of events on connect
+- **Incremental sync**: Use Graph `delta` queries for efficient polling (only changed events)
+- **Background sync**: Poll every 5 minutes when app is visible; sync-on-focus when tab reactivated
+- **Conflict resolution**: External calendar is source of truth for synced events; local edits flagged as overrides
+
+### UX Flow
+
+1. User clicks **"Connect Outlook / Teams"** button (prominent, branded with Microsoft logo)
+2. Microsoft login popup opens (MSAL popup flow — no full-page redirect)
+3. User signs in with work/school or personal Microsoft account
+4. Consent screen shows requested permissions (first time only)
+5. Popup closes → calendar list loads → user selects calendars to sync
+6. Events appear in the app within seconds
+7. Status indicator shows "Connected to Microsoft 365" with last sync time
+
+---
+
+## Slack Bot Integration
+
+### Overview
+
+A Slack bot that posts meeting-related notifications to team channels. Runs as a **lightweight backend service** (can be a Supabase Edge Function, Cloudflare Worker, or standalone Node.js service).
+
+### Slack App Configuration
+- **Bot token scopes**: `chat:write`, `channels:read`, `groups:read`, `users:read`
+- **Event subscriptions** (optional, for interactive features): `app_mention`, `message.channels`
+- **Slash commands** (optional): `/meetings today`, `/meetings conflicts`, `/meetings next`
+- **OAuth**: Slack "Add to Workspace" flow for team installation
+
+### Features — Phased Rollout
+
+#### Phase 1: Notifications (Push from Calendar → Slack)
+- **Daily digest**: Post a morning summary of today's meetings to a configured channel (e.g., `#team-calendar`)
+- **Conflict alerts**: When a new conflict is detected, post to channel with affected meetings and people
+- **Meeting reminders**: Configurable pre-meeting reminder (e.g., 10 min before) with join link
+- **Sync status**: Post when calendar sync succeeds or fails (to an admin/ops channel)
+
+#### Phase 2: Interactive (Slack ↔ Calendar)
+- **Slash commands**: `/starfox today` — list today's meetings; `/starfox conflicts` — show current conflicts
+- **Block Kit messages**: Rich meeting cards with buttons (Join Meeting, View Details, Snooze Reminder)
+- **Channel mapping**: Map Slack channels to calendar categories/teams (e.g., `#frontend-team` ↔ "Frontend" category)
+
+#### Phase 3: Bidirectional (Future)
+- Create/update meetings from Slack via modal dialogs
+- RSVP to meetings from Slack reactions or buttons
+- Presence sync: show meeting status in Slack user status
+
+### Architecture
+
+```
+┌─────────────┐     Webhook/Cron      ┌──────────────────┐
+│  Starfox    │  ──────────────────►  │  Slack Bot        │
+│  Web App    │                       │  (Edge Function)  │
+│  (Supabase) │  ◄──────────────────  │                   │
+└─────────────┘     Slash Commands    └──────────────────┘
+       │                                      │
+       │ Supabase DB                          │ Slack API
+       ▼                                      ▼
+  ┌──────────┐                         ┌───────────┐
+  │ Meetings │                         │  Slack    │
+  │ Table    │                         │  Channels │
+  └──────────┘                         └───────────┘
+```
+
+- **Trigger mechanism**: Supabase Database Webhooks on meeting insert/update/delete → call Edge Function → post to Slack
+- **Cron for digests**: Supabase `pg_cron` or external scheduler triggers daily digest Edge Function
+- **Config storage**: New `slack_config` table in Supabase (webhook URL, channel mappings, notification preferences)
+- **No secrets in frontend**: Slack bot token and webhook URLs stored server-side only (Supabase secrets / Edge Function env vars)
+
+### Configuration UX (In-App)
+
+- Settings page gets a **"Slack Integration"** section
+- **Connect to Slack** button → Slack OAuth "Add to Workspace" flow
+- Channel selector: pick which Slack channel receives notifications
+- Notification preferences: toggles for digest, reminders, conflict alerts
+- Test button: sends a test message to verify connection
+
+### Data Types
+
+```typescript
+interface SlackConfig {
+  id: string;
+  teamId: string;              // Slack team/workspace ID
+  botToken: string;            // Stored server-side only, never sent to client
+  defaultChannelId: string;    // Default notification channel
+  channelMappings: {           // Category → Slack channel mapping
+    categoryId: string;
+    channelId: string;
+    channelName: string;
+  }[];
+  notifications: {
+    dailyDigest: boolean;
+    dailyDigestTime: string;   // e.g., "08:30" in team timezone
+    conflictAlerts: boolean;
+    meetingReminders: boolean;
+    reminderMinutesBefore: number;
+  };
+  installedBy: string;         // User ID who installed the bot
+  installedAt: string;         // ISO timestamp
+}
+```
 
 ---
 
