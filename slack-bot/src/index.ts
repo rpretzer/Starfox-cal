@@ -12,8 +12,7 @@ import { buildDailyDigestBlocks, buildConflictAlertBlocks, buildReminderBlocks }
 
 const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN;
 const SLACK_SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET;
-// Strip surrounding quotes that some dotenv parsers preserve (e.g. "#team-calendar" → #team-calendar)
-const DEFAULT_CHANNEL = (process.env.SLACK_DEFAULT_CHANNEL ?? '#team-calendar').replace(/^["']|["']$/g, '');
+const DEFAULT_CHANNEL = process.env.SLACK_DEFAULT_CHANNEL ?? '#team-calendar';
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 const PORT = parseInt(process.env.PORT ?? '3001', 10);
 
