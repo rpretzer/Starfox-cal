@@ -31,7 +31,9 @@ export function useMSAuth(): UseMSAuthReturn {
       const { account: acc } = await msSignIn();
       setAccount(acc);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sign-in failed');
+      const message = err instanceof Error ? err.message : 'Sign-in failed';
+      setError(message);
+      throw err; // re-throw so callers (e.g. MSConnectButton) can react to failure
     } finally {
       setIsLoading(false);
     }

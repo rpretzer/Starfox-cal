@@ -58,7 +58,10 @@ interface GraphCalendarListPage {
 
 async function graphFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const token = await msGetToken();
-  const response = await fetch(`${GRAPH_BASE}${path}`, {
+  // Graph returns absolute URLs in @odata.nextLink / @odata.deltaLink, so only
+  // prepend the base URL when the path is relative (doesn't start with http).
+  const url = path.startsWith('http') ? path : `${GRAPH_BASE}${path}`;
+  const response = await fetch(url, {
     ...options,
     headers: {
       Authorization: `Bearer ${token}`,
