@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useStore } from '../store/useStore';
-import { Category } from '../types';
+import type { Category } from '../types';
 import { getAvailableTimezones, getTimezoneDisplayName, getCurrentTimezone } from '../utils/timeUtils';
 import { useGlobalToast } from '../hooks/useGlobalToast';
 import { WEB_SAFE_COLORS, getNextAvailableColor, hexToNumber, numberToHex } from '../utils/colorPalette';
@@ -103,17 +103,31 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
     setNewCategoryColor(getNextAvailableColor(usedColors));
   };
 
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   if (showCalendarSync) {
     return <CalendarSyncModal onClose={() => setShowCalendarSync(false)} />;
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-2 sm:p-4 z-50">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="settings-modal-title"
+      className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-2 sm:p-4 z-50"
+    >
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="p-4 sm:p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Settings</h2>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl">
+            <h2 id="settings-modal-title" className="text-xl font-bold text-gray-900 dark:text-gray-100">Settings</h2>
+            <button onClick={onClose} aria-label="Close settings" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl">
               &times;
             </button>
           </div>
@@ -127,10 +141,11 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
               <div className="space-y-3">
                 {/* Time Format */}
                 <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <span className="text-gray-900 dark:text-gray-100">Time Format</span>
-                  <div className="flex gap-1">
+                  <span id="time-format-label" className="text-gray-900 dark:text-gray-100">Time Format</span>
+                  <div role="group" aria-labelledby="time-format-label" className="flex gap-1">
                     <button
                       onClick={() => setTimeFormat('12h')}
+                      aria-pressed={settings.timeFormat === '12h'}
                       className={`px-3 py-1 rounded text-sm ${
                         settings.timeFormat === '12h'
                           ? 'bg-primary text-white'
@@ -141,6 +156,7 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                     </button>
                     <button
                       onClick={() => setTimeFormat('24h')}
+                      aria-pressed={settings.timeFormat === '24h'}
                       className={`px-3 py-1 rounded text-sm ${
                         settings.timeFormat === '24h'
                           ? 'bg-primary text-white'
@@ -154,8 +170,9 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
 
                 {/* Timezone */}
                 <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <span className="text-gray-900 dark:text-gray-100">Timezone</span>
+                  <label htmlFor="timezone-select" className="text-gray-900 dark:text-gray-100">Timezone</label>
                   <select
+                    id="timezone-select"
                     value={settings.timezone || getCurrentTimezone()}
                     onChange={(e) => setTimezone(e.target.value === getCurrentTimezone() ? undefined : e.target.value)}
                     className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm max-w-[200px]"
@@ -169,15 +186,16 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
 
                 {/* Monthly View */}
                 <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <span className="text-gray-900 dark:text-gray-100">Monthly View</span>
+                  <label htmlFor="monthly-view-toggle" className="text-gray-900 dark:text-gray-100 cursor-pointer">Monthly View</label>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
+                      id="monthly-view-toggle"
                       type="checkbox"
                       checked={settings.monthlyViewEnabled}
                       onChange={(e) => setMonthlyViewEnabled(e.target.checked)}
                       className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary" aria-hidden="true"></div>
                   </label>
                 </div>
               </div>
@@ -192,7 +210,9 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
               {/* Add/Edit Form */}
               <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg mb-3">
                 <div className="flex gap-2">
+                  <label htmlFor="team-name-input" className="sr-only">Team name</label>
                   <input
+                    id="team-name-input"
                     type="text"
                     value={newCategoryName}
                     onChange={(e) => setNewCategoryName(e.target.value)}
@@ -203,9 +223,10 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                   <button
                     type="button"
                     onClick={() => setShowColorPicker(!showColorPicker)}
-                    className="w-10 h-10 rounded-lg border-2 border-gray-300 dark:border-gray-600 flex-shrink-0"
+                    aria-label={`Pick color — current: ${newCategoryColor}`}
+                    aria-expanded={showColorPicker}
+                    className="w-10 h-10 rounded-lg border-2 border-gray-300 dark:border-gray-600 flex-shrink-0 focus:ring-2 focus:ring-primary"
                     style={{ backgroundColor: newCategoryColor }}
-                    title="Pick color"
                   />
                   {editingCategory ? (
                     <>
@@ -243,11 +264,12 @@ export default function SettingsScreen({ onClose }: SettingsScreenProps) {
                               }
                             }}
                             disabled={isUsed}
+                            aria-label={isUsed ? `${color} — already used` : `Select color ${color}${isSelected ? ' (selected)' : ''}`}
+                            aria-pressed={isSelected}
                             className={`w-6 h-6 rounded border ${
                               isSelected ? 'ring-2 ring-primary border-gray-900 dark:border-white' : 'border-gray-300 dark:border-gray-600'
                             } ${isUsed ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer hover:scale-110'}`}
                             style={{ backgroundColor: color }}
-                            title={isUsed ? 'Already used' : color}
                           />
                         );
                       })}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../store/useStore';
 import { DAYS_OF_WEEK } from '../constants';
-import { Meeting } from '../types';
+import type { Meeting } from '../types';
 
 interface Conflict {
   day: string;

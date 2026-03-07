@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
-import { Meeting, WeekType } from '../types';
+import type { Meeting, WeekType } from '../types';
 import { DAYS_OF_WEEK } from '../constants';
 import { timeToInputFormat, inputFormatToTime } from '../utils/timeUtils';
 import { useGlobalToast } from '../hooks/useGlobalToast';
@@ -27,6 +27,15 @@ export default function MeetingDetailModal({ meeting, onClose }: MeetingDetailMo
     setStartTimeInput(timeToInputFormat(meeting.startTime));
     setEndTimeInput(timeToInputFormat(meeting.endTime));
   }, [meeting]);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,18 +93,25 @@ export default function MeetingDetailModal({ meeting, onClose }: MeetingDetailMo
     });
   };
 
+  const modalTitleId = `meeting-modal-title-${meeting.id}`;
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70 flex items-center justify-center p-2 sm:p-4 z-50">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={modalTitleId}
+      className="fixed inset-0 bg-black bg-opacity-50 dark:bg-black dark:bg-opacity-70 flex items-center justify-center p-2 sm:p-4 z-50"
+    >
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
         <div className="p-4 sm:p-6">
           <div className="flex justify-between items-center mb-4 sm:mb-6">
-            <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-gray-100">
+            <h2 id={modalTitleId} className="text-lg sm:text-xl lg:text-2xl font-bold text-gray-900 dark:text-gray-100">
               {meeting.id > 0 ? 'Edit Meeting' : 'Add Meeting'}
             </h2>
             <button
               onClick={onClose}
               className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl sm:text-3xl flex-shrink-0 ml-2"
-              aria-label="Close"
+              aria-label="Close dialog"
             >
               ×
             </button>

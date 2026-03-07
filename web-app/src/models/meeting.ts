@@ -1,4 +1,5 @@
-import { Meeting, WeekType } from '../types';
+import type { Meeting} from '../types';
+import { WeekType } from '../types';
 
 export const getDefaultMeetings = (): Meeting[] => {
   return [

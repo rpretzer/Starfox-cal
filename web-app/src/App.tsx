@@ -7,12 +7,19 @@ import ToastContainer, { useToast } from './components/ToastContainer';
 import { setGlobalToast } from './hooks/useGlobalToast';
 import { exchangeGoogleCode, exchangeOutlookCode } from './services/calendarSync';
 import { authService } from './services/auth';
+import type { CalendarSyncConfig, CalendarProvider } from './types';
+import PWAInstallBanner from './components/PWAInstallBanner';
+import PWAUpdatePrompt from './components/PWAUpdatePrompt';
+import { usePWA } from './hooks/usePWA';
 
 function App() {
   const { init, isLoading, saveSyncConfig, subscribeToRealtimeUpdates, refreshAll } = useStore();
   const [oauthProcessing, setOauthProcessing] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const { toasts, showToast, removeToast } = useToast();
+  const { isInstallable, needsUpdate, promptInstall, applyUpdate } = usePWA();
+  const [installBannerDismissed, setInstallBannerDismissed] = useState(false);
+  const [updateDismissed, setUpdateDismissed] = useState(false);
 
   // Set global toast instance
   useEffect(() => {
@@ -124,10 +131,10 @@ function App() {
           const expiresAt = new Date();
           expiresAt.setSeconds(expiresAt.getSeconds() + expiresIn);
 
-          const config: any = {
+          const config: CalendarSyncConfig & { id: string } = {
             id: `${pendingConfig.provider}-${pendingConfig.name}`,
-            provider: pendingConfig.provider,
-            name: pendingConfig.name,
+            provider: pendingConfig.provider as CalendarProvider,
+            name: pendingConfig.name as string,
             enabled: true,
             accessToken,
             refreshToken,
@@ -233,7 +240,7 @@ function App() {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('Tab became visible, refreshing data...');
+        // Tab became visible, refresh data
         refreshAll().catch((err) => {
           console.warn('Failed to refresh on visibility change:', err);
         });
@@ -241,7 +248,7 @@ function App() {
     };
 
     const handleFocus = () => {
-      console.log('Window focused, refreshing data...');
+      // Window focused, refresh data
       refreshAll().catch((err) => {
         console.warn('Failed to refresh on focus:', err);
       });
@@ -310,6 +317,18 @@ function App() {
     <>
       <CalendarScreen />
       <ToastContainer toasts={toasts} onClose={removeToast} />
+      {needsUpdate && !updateDismissed && (
+        <PWAUpdatePrompt
+          onUpdate={applyUpdate}
+          onDismiss={() => setUpdateDismissed(true)}
+        />
+      )}
+      {isInstallable && !installBannerDismissed && (
+        <PWAInstallBanner
+          onInstall={promptInstall}
+          onDismiss={() => setInstallBannerDismissed(true)}
+        />
+      )}
     </>
   );
 }

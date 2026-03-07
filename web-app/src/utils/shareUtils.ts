@@ -2,7 +2,7 @@
  * Utilities for sharing meetings and generating permalinks
  */
 
-import { Meeting, ViewType, WeekTypeFilter } from '../types';
+import type { Meeting, ViewType, WeekTypeFilter } from '../types';
 
 /**
  * Generate a permalink for a meeting
@@ -57,7 +57,7 @@ export async function shareMeeting(meeting: Meeting, permalink?: string): Promis
         url: shareUrl,
       });
       return;
-    } catch (error) {
+    } catch {
       // User cancelled or error occurred, fall back to clipboard
     }
   }

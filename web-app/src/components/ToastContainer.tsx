@@ -1,26 +1,8 @@
-import { useState, useCallback } from 'react';
-import ToastComponent, { Toast } from './Toast';
+import type { Toast } from './Toast';
+import ToastComponent from './Toast';
 
-export type ToastType = 'success' | 'error' | 'info' | 'warning';
-
-let toastIdCounter = 0;
-
-export function useToast() {
-  const [toasts, setToasts] = useState<Toast[]>([]);
-
-  const showToast = useCallback((message: string, type: ToastType = 'info', duration?: number) => {
-    const id = `toast-${++toastIdCounter}`;
-    const newToast: Toast = { id, message, type, duration };
-    setToasts((prev) => [...prev, newToast]);
-    return id;
-  }, []);
-
-  const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  }, []);
-
-  return { toasts, showToast, removeToast };
-}
+export { useToast } from '../hooks/useToast';
+export type { ToastType } from '../hooks/useToast';
 
 interface ToastContainerProps {
   toasts: Toast[];
@@ -38,4 +20,3 @@ export default function ToastContainer({ toasts, onClose }: ToastContainerProps)
     </div>
   );
 }
-

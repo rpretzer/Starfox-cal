@@ -1,6 +1,6 @@
 /**
  * Storage Adapter
- * 
+ *
  * Provides a unified interface that switches between IndexedDB (local) and Supabase (cloud)
  * based on authentication state.
  */
@@ -8,37 +8,30 @@
 import { storageService } from './storage';
 import { supabaseStorageService } from './supabaseStorage';
 import { authService } from './auth';
-import { Meeting, Category, AppSettings, MeetingSeries, CalendarSyncConfig, ViewType, WeekTypeFilter } from '../types';
+import type { Meeting, Category, AppSettings, MeetingSeries, CalendarSyncConfig, ViewType, WeekTypeFilter } from '../types';
 
 class StorageAdapter {
   private useCloud = false;
 
   async init(): Promise<void> {
     try {
-      // Check if Supabase is configured first (fast check)
       const { isSupabaseConfigured } = await import('./supabase');
-      
       if (!isSupabaseConfigured) {
-        // No Supabase config, use local storage immediately
         this.useCloud = false;
         await storageService.init();
         return;
       }
-
-      // Supabase is configured, check auth with timeout
       try {
         const session = await Promise.race([
           authService.getSession(),
-          new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)), // 2 second timeout
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)),
         ]);
-        
         this.useCloud = !!session;
-
         if (this.useCloud) {
           try {
             await Promise.race([
               supabaseStorageService.init(),
-              new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000)), // 5 second timeout
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000)),
             ]);
           } catch (error) {
             console.warn('Failed to initialize Supabase, falling back to local storage:', error);
@@ -70,12 +63,9 @@ class StorageAdapter {
         }
         return;
       }
-      
       const session = await authService.getSession();
       const wasUsingCloud = this.useCloud;
       this.useCloud = !!session;
-
-      // If auth state changed, reinitialize
       if (wasUsingCloud !== this.useCloud) {
         if (this.useCloud) {
           try {
@@ -89,7 +79,6 @@ class StorageAdapter {
         }
       }
     } catch (error) {
-      // If auth check fails, stay on local storage
       console.warn('Auth check failed:', error);
       if (this.useCloud) {
         this.useCloud = false;
@@ -102,7 +91,6 @@ class StorageAdapter {
     return this.useCloud ? supabaseStorageService : storageService;
   }
 
-  // Meetings
   async getAllMeetings(): Promise<Meeting[]> {
     await this.checkAuthAndSwitch();
     return this.getStorage().getAllMeetings();
@@ -128,7 +116,6 @@ class StorageAdapter {
     return this.getStorage().getNextMeetingId();
   }
 
-  // Categories
   async getAllCategories(): Promise<Category[]> {
     await this.checkAuthAndSwitch();
     return this.getStorage().getAllCategories();
@@ -144,7 +131,6 @@ class StorageAdapter {
     return this.getStorage().deleteCategory(id);
   }
 
-  // Settings
   async getSettings(): Promise<AppSettings> {
     await this.checkAuthAndSwitch();
     return this.getStorage().getSettings();
@@ -167,95 +153,67 @@ class StorageAdapter {
 
   async setDefaultPublicVisibility(visibility: 'private' | 'busy' | 'titles' | 'full'): Promise<void> {
     await this.checkAuthAndSwitch();
-    if (this.useCloud) {
-      return supabaseStorageService.setDefaultPublicVisibility(visibility);
-    }
-    // IndexedDB doesn't have this method, skip
+    return this.getStorage().setDefaultPublicVisibility(visibility);
   }
 
   async setPermalinkBaseUrl(url: string | undefined): Promise<void> {
     await this.checkAuthAndSwitch();
-    if (this.useCloud) {
-      return supabaseStorageService.setPermalinkBaseUrl(url);
-    }
-    // IndexedDB doesn't have this method, skip
+    return this.getStorage().setPermalinkBaseUrl(url);
   }
 
   async setOAuthClientIds(clientIds: { google?: string; microsoft?: string; apple?: string }): Promise<void> {
     await this.checkAuthAndSwitch();
-    if (this.useCloud) {
-      return supabaseStorageService.setOAuthClientIds(clientIds);
-    }
-    // IndexedDB doesn't have this method, skip
+    return this.getStorage().setOAuthClientIds(clientIds);
   }
 
-  // Meeting Series
   async getMeetingSeries(): Promise<MeetingSeries[]> {
     await this.checkAuthAndSwitch();
-    if (this.useCloud) {
-      return supabaseStorageService.getAllMeetingSeries();
-    }
-    return (storageService as any).getMeetingSeries();
+    if (this.useCloud) return supabaseStorageService.getAllMeetingSeries();
+    return storageService.getMeetingSeries();
   }
 
   async getMeetingsInSeries(seriesId: string): Promise<Meeting[]> {
     await this.checkAuthAndSwitch();
-    if (this.useCloud) {
-      return supabaseStorageService.getMeetingsInSeries(seriesId);
-    }
-    return (storageService as any).getMeetingsInSeries(seriesId);
+    if (this.useCloud) return supabaseStorageService.getMeetingsInSeries(seriesId);
+    return storageService.getMeetingsInSeries(seriesId);
   }
 
   async saveMeetingSeries(series: MeetingSeries): Promise<void> {
     await this.checkAuthAndSwitch();
-    if (this.useCloud) {
-      return supabaseStorageService.saveMeetingSeries(series);
-    }
-    return (storageService as any).saveMeetingSeries(series);
+    if (this.useCloud) return supabaseStorageService.saveMeetingSeries(series);
+    // IndexedDB: series are derived from meetings — nothing to persist separately
   }
 
   async updateMeetingSeries(seriesId: string, updates: Partial<MeetingSeries>): Promise<void> {
     await this.checkAuthAndSwitch();
-    if (this.useCloud) {
-      return supabaseStorageService.updateMeetingSeries(seriesId, updates);
-    }
-    return (storageService as any).updateMeetingSeries(seriesId, updates);
+    if (this.useCloud) return supabaseStorageService.updateMeetingSeries(seriesId, updates);
+    return storageService.updateMeetingSeries(seriesId, updates);
   }
 
   async deleteMeetingSeries(seriesId: string): Promise<void> {
     await this.checkAuthAndSwitch();
-    if (this.useCloud) {
-      return supabaseStorageService.deleteMeetingSeries(seriesId);
-    }
-    return (storageService as any).deleteMeetingSeries(seriesId);
+    if (this.useCloud) return supabaseStorageService.deleteMeetingSeries(seriesId);
+    return storageService.deleteMeetingSeries(seriesId);
   }
 
-  // Calendar Sync
   async getSyncConfigs(): Promise<CalendarSyncConfig[]> {
     await this.checkAuthAndSwitch();
-    if (this.useCloud) {
-      return supabaseStorageService.getAllSyncConfigs();
-    }
-    return (storageService as any).getAllSyncConfigs();
+    if (this.useCloud) return supabaseStorageService.getAllSyncConfigs();
+    return storageService.getSyncConfigs();
   }
 
   async saveSyncConfig(config: CalendarSyncConfig & { id: string }): Promise<void> {
     await this.checkAuthAndSwitch();
-    if (this.useCloud) {
-      return supabaseStorageService.saveSyncConfig(config);
-    }
-    return (storageService as any).saveSyncConfig(config);
+    if (this.useCloud) return supabaseStorageService.saveSyncConfig(config);
+    return storageService.saveSyncConfig(config);
   }
 
   async deleteSyncConfig(id: string): Promise<void> {
     await this.checkAuthAndSwitch();
-    if (this.useCloud) {
-      return supabaseStorageService.deleteSyncConfig(id);
-    }
-    return (storageService as any).deleteSyncConfig(id);
+    if (this.useCloud) return supabaseStorageService.deleteSyncConfig(id);
+    return storageService.deleteSyncConfig(id);
   }
 
-  // View/WeekType - synced to both local and cloud storage
   async getCurrentView(): Promise<ViewType> {
     if (this.useCloud) {
       try {
@@ -265,8 +223,7 @@ class StorageAdapter {
         console.warn('Failed to get view from cloud:', error);
       }
     }
-    // Fall back to local storage
-    return (storageService as any).getCurrentView() || 'weekly';
+    return storageService.getCurrentView() || 'weekly';
   }
 
   async getCurrentWeekType(): Promise<WeekTypeFilter> {
@@ -278,20 +235,16 @@ class StorageAdapter {
         console.warn('Failed to get week type from cloud:', error);
       }
     }
-    // Fall back to local storage
-    return (storageService as any).getCurrentWeekType() || 'A';
+    return storageService.getCurrentWeekType() || 'A';
   }
 
   async setCurrentView(view: ViewType): Promise<void> {
-    // Save to local storage first (for fast access)
     try {
       await storageService.init();
-      (storageService as any).setCurrentView(view);
+      storageService.setCurrentView(view);
     } catch (error) {
       console.warn('Failed to save view to local storage:', error);
     }
-
-    // Also save to cloud if authenticated
     if (this.useCloud) {
       try {
         await supabaseStorageService.setCurrentView(view);
@@ -302,15 +255,12 @@ class StorageAdapter {
   }
 
   async setCurrentWeekType(weekType: WeekTypeFilter): Promise<void> {
-    // Save to local storage first (for fast access)
     try {
       await storageService.init();
-      (storageService as any).setCurrentWeekType(weekType);
+      storageService.setCurrentWeekType(weekType);
     } catch (error) {
       console.warn('Failed to save week type to local storage:', error);
     }
-
-    // Also save to cloud if authenticated
     if (this.useCloud) {
       try {
         await supabaseStorageService.setCurrentWeekType(weekType);
@@ -320,36 +270,24 @@ class StorageAdapter {
     }
   }
 
-  // Helper methods (IndexedDB only)
   async getMeetingsForDay(day: string): Promise<Meeting[]> {
     await this.checkAuthAndSwitch();
-    if (!this.useCloud) {
-      return (storageService as any).getMeetingsForDay(day);
-    }
-    // For Supabase, filter in memory
+    if (!this.useCloud) return storageService.getMeetingsForDay(day);
     const meetings = await this.getAllMeetings();
     return meetings.filter(m => m.days.includes(day));
   }
 
   async getConflictsForDay(day: string): Promise<Array<{ day: string; time: string; meetings: number[] }>> {
     await this.checkAuthAndSwitch();
-    if (!this.useCloud) {
-      return (storageService as any).getConflictsForDay(day);
-    }
-    // For Supabase, calculate conflicts in memory
+    if (!this.useCloud) return storageService.getConflictsForDay(day);
     const meetings = await this.getMeetingsForDay(day);
     const conflicts: Array<{ day: string; time: string; meetings: number[] }> = [];
-    // Simple conflict detection - meetings with overlapping times
     for (let i = 0; i < meetings.length; i++) {
       for (let j = i + 1; j < meetings.length; j++) {
         const m1 = meetings[i];
         const m2 = meetings[j];
         if (m1.startTime < m2.endTime && m2.startTime < m1.endTime) {
-          conflicts.push({
-            day,
-            time: `${m1.startTime} - ${m1.endTime}`,
-            meetings: [m1.id, m2.id],
-          });
+          conflicts.push({ day, time: `${m1.startTime} - ${m1.endTime}`, meetings: [m1.id, m2.id] });
         }
       }
     }
@@ -358,34 +296,23 @@ class StorageAdapter {
 
   async moveMeetingToDay(meetingId: number, newDay: string): Promise<void> {
     await this.checkAuthAndSwitch();
-    if (!this.useCloud) {
-      return (storageService as any).moveMeetingToDay(meetingId, newDay);
-    }
-    // For Supabase, update the meeting's days array
+    if (!this.useCloud) return storageService.moveMeetingToDay(meetingId, newDay);
     const meeting = await this.getMeeting(meetingId);
     if (meeting) {
-      const updatedDays = meeting.days.includes(newDay)
-        ? meeting.days
-        : [...meeting.days, newDay];
+      const updatedDays = meeting.days.includes(newDay) ? meeting.days : [...meeting.days, newDay];
       await this.saveMeeting({ ...meeting, days: updatedDays });
     }
   }
 
-  // Real-time subscriptions (Supabase only)
   subscribeToMeetings(callback: (meeting: Meeting, event: 'INSERT' | 'UPDATE' | 'DELETE') => void) {
-    if (this.useCloud) {
-      return supabaseStorageService.subscribeToMeetings(callback);
-    }
+    if (this.useCloud) return supabaseStorageService.subscribeToMeetings(callback);
     return { unsubscribe: () => {} };
   }
 
   subscribeToCategories(callback: (category: Category, event: 'INSERT' | 'UPDATE' | 'DELETE') => void) {
-    if (this.useCloud) {
-      return supabaseStorageService.subscribeToCategories(callback);
-    }
+    if (this.useCloud) return supabaseStorageService.subscribeToCategories(callback);
     return { unsubscribe: () => {} };
   }
 }
 
 export const storageAdapter = new StorageAdapter();
-

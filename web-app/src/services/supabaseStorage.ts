@@ -6,7 +6,63 @@
  */
 
 import { supabase } from './supabase';
-import { Meeting, Category, AppSettings, MeetingSeries, CalendarSyncConfig } from '../types';
+import type { Meeting, Category, AppSettings, MeetingSeries, CalendarSyncConfig, WeekType, CalendarProvider } from '../types';
+
+
+// ==================== DB Row Types ====================
+
+interface MeetingDBRow {
+  id: number;
+  name: string;
+  category_id: string;
+  days: string[];
+  start_time: string;
+  end_time: string;
+  week_type: string;
+  requires_attendance: string;
+  notes: string | null;
+  assigned_to: string | null;
+  series_id: string | null;
+  meeting_link: string | null;
+  meeting_link_type: string | null;
+  public_visibility: string | null;
+  permalink: string | null;
+  version: number;
+}
+
+interface CategoryDBRow {
+  id: string;
+  name: string;
+  color_value: number;
+}
+
+interface SeriesDBRow {
+  series_id: string;
+  name: string;
+  category_id: string;
+  start_time: string;
+  end_time: string;
+  week_type: string;
+  days: string[];
+  requires_attendance: string;
+  notes: string | null;
+  assigned_to: string | null;
+  meeting_ids: number[];
+}
+
+interface SyncConfigDBRow {
+  provider: string;
+  enabled: boolean;
+  name: string;
+  last_sync: string | null;
+  sync_interval: number | null;
+  google_calendar_id: string | null;
+  outlook_calendar_id: string | null;
+  ics_url: string | null;
+  access_token: string | null;
+  refresh_token: string | null;
+  expires_at: string | null;
+}
 
 class SupabaseStorageService {
   private initialized = false;
@@ -59,7 +115,7 @@ class SupabaseStorageService {
       // Update existing
       const { error } = await supabase
         .from('meetings')
-        .update({ ...dbMeeting, version: dbMeeting.version + 1 })
+        .update(dbMeeting)
         .eq('id', meeting.id);
 
       if (error) throw error;
@@ -204,7 +260,7 @@ class SupabaseStorageService {
 
   async updateMeetingSeries(seriesId: string, updates: Partial<MeetingSeries>): Promise<void> {
     await this.init();
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
     
     if (updates.name !== undefined) updateData.name = updates.name;
     if (updates.categoryId !== undefined) updateData.category_id = updates.categoryId;
@@ -246,9 +302,9 @@ class SupabaseStorageService {
       monthlyViewEnabled: data.monthly_view_enabled ?? true,
       timezone: data.timezone ?? undefined,
       timeFormat: (data.time_format as '12h' | '24h') || '12h',
-      defaultPublicVisibility: (data.default_public_visibility as any) || 'private',
+      defaultPublicVisibility: (data.default_public_visibility as AppSettings['defaultPublicVisibility']) ?? 'private',
       permalinkBaseUrl: data.permalink_base_url ?? undefined,
-      oauthClientIds: data.oauth_client_ids as any,
+      oauthClientIds: data.oauth_client_ids as AppSettings['oauthClientIds'],
     };
   }
 
@@ -407,9 +463,9 @@ class SupabaseStorageService {
         },
         (payload) => {
           if (payload.eventType === 'DELETE') {
-            callback(payload.old as any, 'DELETE');
+            callback(this.mapMeetingFromDB(payload.old as MeetingDBRow), "DELETE");
           } else {
-            callback(this.mapMeetingFromDB(payload.new as any), payload.eventType as 'INSERT' | 'UPDATE');
+            callback(this.mapMeetingFromDB(payload.new as MeetingDBRow), payload.eventType as 'INSERT' | 'UPDATE');
           }
         }
       )
@@ -428,9 +484,9 @@ class SupabaseStorageService {
         },
         (payload) => {
           if (payload.eventType === 'DELETE') {
-            callback(payload.old as any, 'DELETE');
+            callback(this.mapCategoryFromDB(payload.old as CategoryDBRow), "DELETE");
           } else {
-            callback(this.mapCategoryFromDB(payload.new as any), payload.eventType as 'INSERT' | 'UPDATE');
+            callback(this.mapCategoryFromDB(payload.new as CategoryDBRow), payload.eventType as 'INSERT' | 'UPDATE');
           }
         }
       )
@@ -439,7 +495,7 @@ class SupabaseStorageService {
 
   // ==================== Helper Methods ====================
 
-  private mapMeetingFromDB(db: any): Meeting {
+  private mapMeetingFromDB(db: MeetingDBRow): Meeting {
     return {
       id: db.id,
       name: db.name,
@@ -447,19 +503,19 @@ class SupabaseStorageService {
       days: db.days,
       startTime: db.start_time,
       endTime: db.end_time,
-      weekType: db.week_type as any,
+      weekType: db.week_type as WeekType,
       requiresAttendance: db.requires_attendance,
       notes: db.notes || '',
       assignedTo: db.assigned_to || '',
       seriesId: db.series_id || undefined,
       meetingLink: db.meeting_link || undefined,
-      meetingLinkType: db.meeting_link_type as any,
-      publicVisibility: db.public_visibility as any,
+      meetingLinkType: db.meeting_link_type as Meeting['meetingLinkType'],
+      publicVisibility: db.public_visibility as Meeting['publicVisibility'],
       permalink: db.permalink || undefined,
     };
   }
 
-  private mapMeetingToDB(meeting: Meeting): any {
+  private mapMeetingToDB(meeting: Meeting): Omit<MeetingDBRow, 'id' | 'version'> {
     return {
       name: meeting.name,
       category_id: meeting.categoryId,
@@ -478,7 +534,7 @@ class SupabaseStorageService {
     };
   }
 
-  private mapCategoryFromDB(db: any): Category {
+  private mapCategoryFromDB(db: CategoryDBRow): Category {
     return {
       id: db.id,
       name: db.name,
@@ -486,14 +542,14 @@ class SupabaseStorageService {
     };
   }
 
-  private mapSeriesFromDB(db: any): MeetingSeries {
+  private mapSeriesFromDB(db: SeriesDBRow): MeetingSeries {
     return {
       seriesId: db.series_id,
       name: db.name,
       categoryId: db.category_id,
       startTime: db.start_time,
       endTime: db.end_time,
-      weekType: db.week_type as any,
+      weekType: db.week_type as WeekType,
       requiresAttendance: db.requires_attendance,
       notes: db.notes || '',
       assignedTo: db.assigned_to || '',
@@ -502,18 +558,18 @@ class SupabaseStorageService {
     };
   }
 
-  private mapSyncConfigFromDB(db: any): CalendarSyncConfig {
+  private mapSyncConfigFromDB(db: SyncConfigDBRow): CalendarSyncConfig {
     return {
-      provider: db.provider as any,
+      provider: db.provider as CalendarProvider,
       enabled: db.enabled,
       name: db.name,
       lastSync: db.last_sync ? new Date(db.last_sync) : undefined,
-      syncInterval: db.sync_interval,
-      googleCalendarId: db.google_calendar_id,
-      outlookCalendarId: db.outlook_calendar_id,
-      icsUrl: db.ics_url,
-      accessToken: db.access_token,
-      refreshToken: db.refresh_token,
+      syncInterval: db.sync_interval ?? undefined,
+      googleCalendarId: db.google_calendar_id ?? undefined,
+      outlookCalendarId: db.outlook_calendar_id ?? undefined,
+      icsUrl: db.ics_url ?? undefined,
+      accessToken: db.access_token ?? undefined,
+      refreshToken: db.refresh_token ?? undefined,
       expiresAt: db.expires_at ? new Date(db.expires_at) : undefined,
     };
   }
