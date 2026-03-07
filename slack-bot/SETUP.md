@@ -39,10 +39,13 @@ Fill in:
 ```env
 SLACK_BOT_TOKEN=xoxb-...
 SLACK_SIGNING_SECRET=...
-SLACK_DEFAULT_CHANNEL=#team-calendar
+SLACK_DEFAULT_CHANNEL="#team-calendar"   # Quotes required — bare # is a comment delimiter
 
 SUPABASE_URL=https://xxx.supabase.co
 SUPABASE_SERVICE_KEY=...    # Service role key (server-side only — keep secret)
+
+# Generate with: openssl rand -hex 32
+WEBHOOK_SECRET=...
 
 PORT=3001
 ```
@@ -63,6 +66,7 @@ npm start         # Production
 3. Table: `meetings`
 4. Events: `INSERT`, `UPDATE`, `DELETE`
 5. Webhook URL: `https://<your-bot-url>/webhook/meeting-changed`
+6. Add HTTP header: `X-Webhook-Secret: <your WEBHOOK_SECRET value>`
 
 ## 5. Schedule Daily Digest
 
@@ -73,7 +77,7 @@ Use Supabase `pg_cron` or an external cron service to POST to `/digest` every mo
 SELECT cron.schedule('daily-digest', '30 8 * * 1-5', $$
   SELECT net.http_post(
     url := 'https://<your-bot-url>/digest',
-    headers := '{"Content-Type": "application/json"}'::jsonb,
+    headers := '{"Content-Type": "application/json", "X-Webhook-Secret": "<your-webhook-secret>"}'::jsonb,
     body := '{}'::jsonb
   );
 $$);
@@ -82,8 +86,9 @@ $$);
 ## 6. Test
 
 ```bash
-# Trigger digest manually
-curl -X POST https://<your-bot-url>/digest
+# Trigger digest manually (requires X-Webhook-Secret header)
+curl -X POST https://<your-bot-url>/digest \
+  -H "X-Webhook-Secret: <your-webhook-secret>"
 
 # Use slash command in Slack
 /starfox today

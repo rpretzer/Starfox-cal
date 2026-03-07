@@ -6,16 +6,36 @@
  */
 
 import { App, type ExpressReceiver } from '@slack/bolt';
+import type { Request, Response, NextFunction } from 'express';
 import { getMeetingsForToday, getAllMeetings, detectConflicts } from './meetingStore.js';
 import { buildDailyDigestBlocks, buildConflictAlertBlocks, buildReminderBlocks } from './blocks.js';
 
 const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN;
 const SLACK_SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET;
-const DEFAULT_CHANNEL = process.env.SLACK_DEFAULT_CHANNEL ?? '#team-calendar';
+// Strip surrounding quotes that some dotenv parsers preserve (e.g. "#team-calendar" → #team-calendar)
+const DEFAULT_CHANNEL = (process.env.SLACK_DEFAULT_CHANNEL ?? '#team-calendar').replace(/^["']|["']$/g, '');
+const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET;
 const PORT = parseInt(process.env.PORT ?? '3001', 10);
 
 if (!SLACK_BOT_TOKEN || !SLACK_SIGNING_SECRET) {
   throw new Error('SLACK_BOT_TOKEN and SLACK_SIGNING_SECRET environment variables are required');
+}
+
+if (!WEBHOOK_SECRET) {
+  throw new Error('WEBHOOK_SECRET environment variable is required — generate one with: openssl rand -hex 32');
+}
+
+/**
+ * Express middleware that requires a matching X-Webhook-Secret header.
+ * Protects /webhook/* and /digest from unauthenticated callers.
+ */
+function requireWebhookSecret(req: Request, res: Response, next: NextFunction): void {
+  const provided = req.headers['x-webhook-secret'];
+  if (!provided || provided !== WEBHOOK_SECRET) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+  next();
 }
 
 const app = new App({
@@ -69,7 +89,7 @@ app.command('/starfox', async ({ command, ack, respond }) => {
 
 const expressReceiver = (app.receiver as ExpressReceiver);
 if (expressReceiver.router) {
-  expressReceiver.router.post('/webhook/meeting-changed', async (req, res) => {
+  expressReceiver.router.post('/webhook/meeting-changed', requireWebhookSecret, async (req, res) => {
     try {
       const { type } = req.body as { type?: string };
 
@@ -110,7 +130,7 @@ async function postDailyDigest(): Promise<void> {
 // Expose for external trigger (e.g., HTTP POST /digest)
 const receiver = (app.receiver as ExpressReceiver);
 if (receiver.router) {
-  receiver.router.post('/digest', async (_req, res) => {
+  receiver.router.post('/digest', requireWebhookSecret, async (_req, res) => {
     try {
       await postDailyDigest();
       res.status(200).json({ ok: true });
