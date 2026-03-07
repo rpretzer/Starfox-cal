@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { DAYS_OF_WEEK } from '../constants';
 import { useStore } from '../store/useStore';
 import MeetingCard from './MeetingCard';
-import { Meeting } from '../types';
+import type { Meeting } from '../types';
 import { useGlobalToast } from '../hooks/useGlobalToast';
 
 interface TeamCalendarProps {
@@ -53,7 +53,8 @@ function TeamDayColumn({ day, categoryId, onMeetingClick, onCreateMeeting }: Tea
     return () => {
       cancelled = true;
     };
-  }, [day, currentWeekType, categoryId, meetings]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [day, currentWeekType, categoryId, meetings]); // getMeetingsForDay is stable (store method)
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -203,8 +204,9 @@ function TeamDayColumn({ day, categoryId, onMeetingClick, onCreateMeeting }: Tea
 
   // Listen for touch drag events from MeetingCard and handle document-level touch tracking
   useEffect(() => {
-    const handleTouchDragStart = (e: CustomEvent) => {
-      const meetingId = parseInt(e.detail?.meetingId || '0', 10);
+    const handleTouchDragStart = (e: Event) => {
+      const ce = e as CustomEvent;
+      const meetingId = parseInt(ce.detail?.meetingId || "0", 10);
       if (meetingId) {
         touchDragState.current = {
           isActive: true,
@@ -265,13 +267,13 @@ function TeamDayColumn({ day, categoryId, onMeetingClick, onCreateMeeting }: Tea
       }
     };
 
-    window.addEventListener('touchdragstart' as any, handleTouchDragStart);
-    window.addEventListener('touchdragend' as any, handleTouchDragEnd);
+    window.addEventListener('touchdragstart' as keyof WindowEventMap, handleTouchDragStart);
+    window.addEventListener('touchdragend' as keyof WindowEventMap, handleTouchDragEnd);
     document.addEventListener('touchmove', handleDocumentTouchMove, { passive: false });
 
     return () => {
-      window.removeEventListener('touchdragstart' as any, handleTouchDragStart);
-      window.removeEventListener('touchdragend' as any, handleTouchDragEnd);
+      window.removeEventListener('touchdragstart' as keyof WindowEventMap, handleTouchDragStart);
+      window.removeEventListener('touchdragend' as keyof WindowEventMap, handleTouchDragEnd);
       document.removeEventListener('touchmove', handleDocumentTouchMove);
     };
   }, [dayMeetings, dragOverIndex, getMeeting, moveMeetingToDay, showToast]);

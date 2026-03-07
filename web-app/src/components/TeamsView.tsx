@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
 import TeamCalendar from './TeamCalendar';
-import { Meeting } from '../types';
+import type { Meeting } from '../types';
 import ConflictsContainer from './ConflictsContainer';
 
 interface TeamsViewProps {

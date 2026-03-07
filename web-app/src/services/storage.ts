@@ -1,5 +1,7 @@
-import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import { Meeting, Category, WeekType, ViewType, WeekTypeFilter, MeetingSeries, CalendarSyncConfig, AppSettings } from '../types';
+import type { DBSchema, IDBPDatabase } from 'idb';
+import { openDB } from 'idb';
+import type { Meeting, Category, ViewType, WeekTypeFilter, MeetingSeries, CalendarSyncConfig, AppSettings } from '../types';
+import { WeekType } from '../types';
 import { getDefaultMeetings } from '../models/meeting';
 import { getDefaultCategories } from '../models/category';
 
@@ -90,10 +92,10 @@ class StorageService {
       try {
         const categories = await this.getAllCategories();
         if (categories.length === 0) {
-          console.log('No categories found, initializing defaults...');
+          // No categories found, initializing defaults
           await this.initDefaultCategories();
         } else {
-          console.log(`Found ${categories.length} existing categories`);
+          // Categories loaded
         }
       } catch (error) {
         console.warn('Error loading categories:', error);
@@ -108,10 +110,10 @@ class StorageService {
       try {
         const meetings = await this.getAllMeetings();
         if (meetings.length === 0) {
-          console.log('No meetings found, initializing defaults...');
+          // No meetings found, initializing defaults
           await this.initDefaultMeetings();
         } else {
-          console.log(`Found ${meetings.length} existing meetings`);
+          // Meetings loaded
         }
       } catch (error) {
         console.warn('Error loading meetings:', error);

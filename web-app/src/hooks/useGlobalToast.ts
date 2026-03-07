@@ -13,8 +13,9 @@ export function useGlobalToast() {
       if (globalToast) {
         return globalToast.showToast(message, type, duration);
       }
-      // Fallback to console if toast not initialized
-      console.log(`[${type.toUpperCase()}] ${message}`);
+      // Toast not yet initialized — surface errors/warnings via console
+      if (type === 'error') console.error(`[Toast] ${message}`);
+      else if (type === 'warning') console.warn(`[Toast] ${message}`);
       return '';
     },
   };

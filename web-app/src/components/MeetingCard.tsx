@@ -1,8 +1,18 @@
 import { useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
-import { Meeting } from '../types';
+import type { Meeting } from '../types';
 import { formatTime } from '../utils/timeUtils';
 import { useGlobalToast } from '../hooks/useGlobalToast';
+
+interface TouchDragEvent {
+  dataTransfer: {
+    effectAllowed: string;
+    setData: (format: string, data: string) => void;
+    getData: (format: string) => string;
+  };
+  clientX: number;
+  clientY: number;
+}
 
 interface MeetingCardProps {
   meeting: Meeting;
@@ -67,7 +77,7 @@ export default function MeetingCard({ meeting, onClick, onDragStart, onDragEnd }
         },
         clientX: touch.clientX,
         clientY: touch.clientY,
-      } as any;
+      } satisfies TouchDragEvent;
       
       dragEvent.dataTransfer.setData('text/plain', meeting.id.toString());
       dragEvent.dataTransfer.setData('meetingId', meeting.id.toString());

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useStore } from '../store/useStore';
-import { ViewType, WeekTypeFilter } from '../types';
+import type { ViewType, WeekTypeFilter } from '../types';
 import { DAYS_OF_WEEK } from '../constants';
 import { generateViewPermalink, copyToClipboard } from '../utils/shareUtils';
 import { useGlobalToast } from '../hooks/useGlobalToast';
@@ -66,16 +66,18 @@ export default function CalendarHeader() {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+    <nav aria-label="Calendar navigation" className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
         <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-4 py-3 sm:py-4">
+          {/* View selector */}
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex-shrink-0">View:</span>
-            <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1 flex-1 sm:flex-initial overflow-x-auto">
+            <span id="view-label" className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex-shrink-0">View:</span>
+            <div role="group" aria-labelledby="view-label" className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1 flex-1 sm:flex-initial overflow-x-auto">
               {availableViews.map((view) => (
                 <button
                   key={view}
                   onClick={() => setCurrentView(view)}
+                  aria-pressed={currentView === view}
                   className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm font-medium transition-colors whitespace-nowrap relative ${
                     currentView === view
                       ? 'bg-primary text-white'
@@ -84,8 +86,12 @@ export default function CalendarHeader() {
                 >
                   {getViewLabel(view)}
                   {conflictsByView[view] && (
-                    <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-white dark:border-gray-800" title="Conflicts detected">
-                      <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                    <span
+                      className="absolute -top-0.5 -right-0.5 flex items-center justify-center w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-white dark:border-gray-800"
+                      aria-label="Scheduling conflicts detected"
+                      role="img"
+                    >
+                      <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" aria-hidden="true" />
                     </span>
                   )}
                 </button>
@@ -93,15 +99,16 @@ export default function CalendarHeader() {
             </div>
           </div>
 
-          {/* Only show Week selector for Weekly or Teams views */}
+          {/* Week selector — only for Weekly or Teams views */}
           {(currentView === 'weekly' || currentView === 'teams') && (
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex-shrink-0">Week:</span>
-              <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+              <span id="week-label" className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex-shrink-0">Week:</span>
+              <div role="group" aria-labelledby="week-label" className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
                 {(['A', 'B'] as WeekTypeFilter[]).map((week) => (
                   <button
                     key={week}
                     onClick={() => setCurrentWeekType(week)}
+                    aria-pressed={currentWeekType === week}
                     className={`px-2 sm:px-3 py-1 rounded text-xs sm:text-sm font-medium transition-colors ${
                       currentWeekType === week
                         ? 'bg-primary text-white'
@@ -115,27 +122,35 @@ export default function CalendarHeader() {
             </div>
           )}
 
-          {/* Share View Button */}
+          {/* Share View */}
           <div className="relative w-full sm:w-auto">
             <button
               onClick={() => setShowShareMenu(!showShareMenu)}
+              aria-expanded={showShareMenu}
+              aria-haspopup="menu"
+              aria-label="Share current view"
               className="w-full sm:w-auto px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center justify-center gap-2 text-sm"
-              title="Share current view"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
               </svg>
-              <span className="hidden sm:inline">Share</span>
+              <span className="hidden sm:inline" aria-hidden="true">Share</span>
             </button>
             {showShareMenu && (
               <>
                 <div
                   className="fixed inset-0 z-40"
                   onClick={() => setShowShareMenu(false)}
+                  aria-hidden="true"
                 />
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+                <div
+                  role="menu"
+                  aria-label="Share options"
+                  className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
+                >
                   <div className="p-2">
                     <button
+                      role="menuitem"
                       onClick={async () => {
                         try {
                           const permalink = generateViewPermalink(currentView, currentWeekType);
@@ -148,7 +163,7 @@ export default function CalendarHeader() {
                       }}
                       className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex items-center gap-2"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                       </svg>
                       Copy View Link
@@ -160,7 +175,7 @@ export default function CalendarHeader() {
           </div>
         </div>
       </div>
-    </div>
+    </nav>
   );
 }
 

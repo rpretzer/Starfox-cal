@@ -1,12 +1,18 @@
 /**
  * Skeleton Loading Screen
- * 
- * Shows a skeleton UI pattern while the app initializes
+ *
+ * Shows a skeleton UI pattern while the app initializes.
+ * Respects prefers-reduced-motion — disables pulse animations for users who prefer reduced motion.
  */
 
 export default function LoadingScreen() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div
+      className="min-h-screen bg-gray-50 dark:bg-gray-900"
+      aria-busy="true"
+      aria-label="Loading calendar"
+      role="main"
+    >
       {/* Header Skeleton */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">

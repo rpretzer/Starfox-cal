@@ -5,7 +5,8 @@
  */
 
 import { useState, useEffect } from 'react';
-import { authService, AuthUser } from '../services/auth';
+import type { AuthUser } from '../services/auth';
+import { authService } from '../services/auth';
 import { useGlobalToast } from '../hooks/useGlobalToast';
 
 interface AuthScreenProps {
@@ -73,8 +74,8 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
           showToast('Signed in successfully!', 'success');
         }
       }
-    } catch (error: any) {
-      showToast(error.message || 'Authentication failed', 'error');
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Authentication failed', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -94,8 +95,8 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
 
       if (error) throw error;
       // OAuth will redirect, so we don't need to do anything else
-    } catch (error: any) {
-      showToast(error.message || `Failed to sign in with ${provider}`, 'error');
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : `Failed to sign in with ${provider}`, 'error');
       setIsLoading(false);
     }
   };
@@ -108,8 +109,8 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
       if (user) {
         showToast('Demo account created!', 'success');
       }
-    } catch (error: any) {
-      showToast(error.message || 'Failed to create demo account', 'error');
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Failed to create demo account', 'error');
       setIsLoading(false);
     }
   };
@@ -121,8 +122,8 @@ export default function AuthScreen({ onAuthSuccess }: AuthScreenProps) {
       if (error) throw error;
       showToast('Signed out successfully', 'success');
       setCurrentUser(null);
-    } catch (error: any) {
-      showToast(error.message || 'Failed to sign out', 'error');
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Failed to sign out', 'error');
     } finally {
       setIsLoading(false);
     }

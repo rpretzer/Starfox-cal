@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../store/useStore';
-import { CalendarProvider } from '../types';
+import type { CalendarProvider } from '../types';
 import { getGoogleAuthUrl, getOutlookAuthUrl, getAppleAuthUrl } from '../services/calendarSync';
 import { useGlobalToast } from '../hooks/useGlobalToast';
 
@@ -46,7 +46,7 @@ export default function CalendarSetupWizard({ onComplete, onSkip }: CalendarSetu
       const redirectUri = `${window.location.origin}/auth/callback`;
 
       switch (provider) {
-        case 'google':
+        case 'google': {
           clientId = settings.oauthClientIds?.google;
           if (!clientId) {
             showToast('Google Client ID not configured. Please set it up first.', 'error');
@@ -58,8 +58,9 @@ export default function CalendarSetupWizard({ onComplete, onSkip }: CalendarSetu
           authUrl = googleAuth.url;
           codeVerifier = googleAuth.codeVerifier;
           break;
+        }
 
-        case 'outlook':
+        case 'outlook': {
           clientId = settings.oauthClientIds?.microsoft;
           if (!clientId) {
             showToast('Microsoft Client ID not configured. Please set it up first.', 'error');
@@ -71,8 +72,9 @@ export default function CalendarSetupWizard({ onComplete, onSkip }: CalendarSetu
           authUrl = outlookAuth.url;
           codeVerifier = outlookAuth.codeVerifier;
           break;
+        }
 
-        case 'apple':
+        case 'apple': {
           clientId = settings.oauthClientIds?.apple;
           if (!clientId) {
             showToast('Apple Client ID not configured. Please set it up first.', 'error');
@@ -84,6 +86,7 @@ export default function CalendarSetupWizard({ onComplete, onSkip }: CalendarSetu
           authUrl = appleAuth.url;
           state = appleAuth.state;
           break;
+        }
 
         default:
           throw new Error(`Unsupported provider: ${provider}`);

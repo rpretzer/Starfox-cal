@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Meeting, Category, ViewType, WeekTypeFilter, AppSettings, MeetingSeries, CalendarSyncConfig } from '../types';
+import type { Meeting, Category, ViewType, WeekTypeFilter, AppSettings, MeetingSeries, CalendarSyncConfig } from '../types';
 import { storageAdapter } from '../services/storageAdapter';
 
 interface AppState {
@@ -68,7 +68,7 @@ export const useStore = create<AppState>()(
         set({ isLoading: true, error: null });
       } else {
         set({ error: null });
-        console.log('Using cached data, refreshing in background...');
+        // Using cached data, refreshing in background
       }
       
       // Initialize storage adapter
@@ -128,11 +128,11 @@ export const useStore = create<AppState>()(
         const currentWeekType = freshWeekType || currentState.currentWeekType;
         const settings = freshSettings || currentState.settings || defaultSettings;
         
-        console.log(`Refreshed data: ${meetings.length} meetings, ${categories.length} categories`);
+        // Data refreshed
         
         // If no meetings but we have categories, default meetings might still be initializing
         if (meetings.length === 0 && categories.length > 0) {
-          console.log('No meetings found but categories exist, waiting for default initialization...');
+          // No meetings yet, waiting for default initialization
           await new Promise(resolve => setTimeout(resolve, 500));
           try {
             const refreshedMeetings = await Promise.race([
@@ -140,7 +140,7 @@ export const useStore = create<AppState>()(
               new Promise<Meeting[]>((resolve) => setTimeout(() => resolve([]), 2000))
             ]);
             if (refreshedMeetings.length > 0) {
-              console.log(`Found ${refreshedMeetings.length} meetings on refresh`);
+              // Meetings found on refresh
               return {
                 meetings: refreshedMeetings,
                 categories,
@@ -177,7 +177,7 @@ export const useStore = create<AppState>()(
           try {
             const refreshedMeetings = await storageAdapter.getAllMeetings();
             if (refreshedMeetings.length > 0) {
-              console.log(`Found ${refreshedMeetings.length} meetings on delayed refresh, updating store`);
+              // Delayed refresh found meetings
               set({ meetings: refreshedMeetings });
             }
           } catch (error) {
@@ -496,22 +496,12 @@ export const useStore = create<AppState>()(
           // Cached data is now available, show it immediately
           // init() will refresh from storage in the background
           state.isLoading = false;
-          console.log('Rehydrated from cache:', {
-            meetings: state.meetings.length,
-            categories: state.categories.length,
-            currentView: state.currentView,
-            currentWeekType: state.currentWeekType,
-            settings: state.settings,
-          });
+          // Cache rehydrated successfully
         }
       },
       // Migrate function for future schema changes
-      migrate: (persistedState: any, version: number) => {
-        // Handle migrations between versions
-        if (version === 0) {
-          // Example: migrate from version 0 to 1
-          // Add any necessary transformations here
-        }
+      migrate: (persistedState: unknown, _version: number) => {
+        // Handle migrations between versions here when needed
         return persistedState;
       },
     }

@@ -1,5 +1,17 @@
-import { Meeting, CalendarSyncConfig, WeekType } from '../types';
+import type { Meeting, CalendarSyncConfig} from '../types';
+import { WeekType } from '../types';
 import { storageService } from './storage';
+
+interface ExternalCalendarEvent {
+  summary?: string;
+  title?: string;
+  description?: string;
+  notes?: string;
+  start: { dateTime?: string; date?: string };
+  end: { dateTime?: string; date?: string };
+  organizer?: { email?: string };
+  attendees?: Array<{ email?: string }>;
+}
 
 
 // Convert Date to day name
@@ -18,10 +30,10 @@ function formatTime(date: Date): string {
 }
 
 // Convert external calendar event to Meeting
-function convertEventToMeeting(event: any, defaultCategoryId: string): Meeting | null {
+function convertEventToMeeting(event: ExternalCalendarEvent, defaultCategoryId: string): Meeting | null {
   try {
-    const startDate = new Date(event.start.dateTime || event.start.date);
-    const endDate = new Date(event.end.dateTime || event.end.date);
+    const startDate = new Date(event.start.dateTime ?? event.start.date ?? "");
+    const endDate = new Date(event.end.dateTime ?? event.end.date ?? "");
     
     // Get day name
     const dayName = getDayName(startDate);
@@ -42,7 +54,7 @@ function convertEventToMeeting(event: any, defaultCategoryId: string): Meeting |
       startTime: formatTime(startDate),
       endTime: formatTime(endDate),
       weekType,
-      requiresAttendance: event.attendees?.map((a: any) => a.email).join(', ') || '',
+      requiresAttendance: event.attendees?.map((a) => a.email ?? "").join(', ') || '',
       notes: event.description || event.notes || '',
       assignedTo: event.organizer?.email || '',
     };
@@ -136,15 +148,15 @@ export async function syncOutlookCalendar(config: CalendarSyncConfig): Promise<M
 export async function syncICSFile(_config: CalendarSyncConfig, icsContent: string): Promise<Meeting[]> {
   // Simple ICS parser (for production, consider using a library like ical.js)
   const lines = icsContent.split('\n');
-  const events: any[] = [];
-  let currentEvent: any = null;
+  const events: ExternalCalendarEvent[] = [];
+  let currentEvent: Partial<ExternalCalendarEvent> & { start: { dateTime?: string }; end: { dateTime?: string } } | null = null;
   let inEvent = false;
 
   for (const line of lines) {
     const trimmed = line.trim();
     if (trimmed.startsWith('BEGIN:VEVENT')) {
       inEvent = true;
-      currentEvent = {};
+      currentEvent = { start: {}, end: {} };
     } else if (trimmed.startsWith('END:VEVENT')) {
       if (currentEvent) {
         events.push(currentEvent);

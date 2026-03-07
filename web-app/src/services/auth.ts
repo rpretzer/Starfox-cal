@@ -5,7 +5,7 @@
  */
 
 import { supabase } from './supabase';
-import { User, Session, AuthError } from '@supabase/supabase-js';
+import type { User, Session, AuthError } from '@supabase/supabase-js';
 
 export interface AuthUser {
   id: string;
@@ -170,7 +170,7 @@ class AuthService {
             unsubscribe: () => {},
           },
         },
-      } as any;
+      } as ReturnType<typeof supabase.auth.onAuthStateChange>;
     }
 
     try {
@@ -190,7 +190,7 @@ class AuthService {
             unsubscribe: () => {},
           },
         },
-      } as any;
+      } as ReturnType<typeof supabase.auth.onAuthStateChange>;
     }
   }
 }

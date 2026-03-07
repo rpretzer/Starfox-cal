@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '../store/useStore';
-import { CalendarSyncConfig, CalendarProvider } from '../types';
+import type { CalendarSyncConfig, CalendarProvider } from '../types';
 import { syncCalendar, getGoogleAuthUrl, getOutlookAuthUrl } from '../services/calendarSync';
 import { useGlobalToast } from '../hooks/useGlobalToast';
 import CalendarSetupWizard from './CalendarSetupWizard';

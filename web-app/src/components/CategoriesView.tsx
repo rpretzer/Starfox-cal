@@ -1,5 +1,5 @@
 import { useStore } from '../store/useStore';
-import { Meeting } from '../types';
+import type { Meeting } from '../types';
 import MeetingCard from './MeetingCard';
 import ConflictsContainer from './ConflictsContainer';
 
